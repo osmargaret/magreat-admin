@@ -1149,7 +1149,7 @@ function App() {
       <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
         <div className="brand">
           <div className="brand-logo-frame">
-            <img src="/images/logo.jpg" alt="Ma'Great Taste" className="brand-logo-img" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <img src="https://res.cloudinary.com/p2pa6dfi/image/upload/f_auto,q_auto,w_200/v1792616012/magreat_brand/logo.jpg" alt="Ma'Great Taste" className="brand-logo-img" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
           <div>
             <strong>Ma'Great Taste</strong>
