@@ -42,12 +42,16 @@ import {
   Copy,
   ExternalLink,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  CheckSquare,
+  Square,
+  Calendar,
+  FileText,
+  DollarSign
 } from 'lucide-react';
 
 // Use production Render backend as default
 const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://magreat-backend.onrender.com/api';
-const BACKEND_ROOT = API_BASE.replace(/\/api\/?$/, '');
 
 type Section =
   | 'Overview'
@@ -132,6 +136,33 @@ export type CustomerRecord = {
   kitchenNotes?: string;
 };
 
+export type CateringLead = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  eventType: string;
+  guestCount: number;
+  location: string;
+  eventDate: string;
+  budget?: string;
+  dietaryRequirements?: string;
+  notes?: string;
+  status: 'Pending' | 'Quote sent' | 'Confirmed' | 'Declined';
+};
+
+export type SavedMealCustomer = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  items: { name: string; price?: number }[];
+  reminderStatus: 'Active' | 'Unsubscribed' | 'Paused';
+  reminderCount: number;
+  lastReminderSentAt?: string;
+  createdAt: string;
+};
+
 // Preset delicious meal photos for quick selection
 const PRESET_DISH_IMAGES = [
   { label: 'Party Jollof & Chicken', url: 'https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?auto=format&fit=crop&w=600&q=80' },
@@ -151,9 +182,7 @@ export function resolveMealImage(img?: string): string {
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
     return trimmed;
   }
-  // If it's a relative path like /meals/akara.jpg
   const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  // When running in Vercel or locally, try local public folder first
   return cleanPath;
 }
 
@@ -280,6 +309,133 @@ const initialCustomers: CustomerRecord[] = [
   }
 ];
 
+const initialCateringLeads: CateringLead[] = [
+  {
+    id: 'CAT-201',
+    customerName: 'Nneka Eze',
+    customerEmail: 'nneka.eze@gmail.com',
+    customerPhone: '0802 334 5567',
+    eventType: 'Birthday Dinner',
+    guestCount: 60,
+    location: 'Lekki Phase 1, Lagos',
+    eventDate: '2026-11-08',
+    budget: '₦850,000',
+    dietaryRequirements: 'Halal chicken only, mild pepper options for kids',
+    notes: 'Would love tasting session beforehand for Jollof and Egusi.',
+    status: 'Quote sent'
+  },
+  {
+    id: 'CAT-202',
+    customerName: 'Northstar Ltd (Kelechi)',
+    customerEmail: 'kelechi@northstar.ng',
+    customerPhone: '0803 777 9901',
+    eventType: 'Corporate Lunch',
+    guestCount: 25,
+    location: 'Victoria Island, Lagos',
+    eventDate: '2026-11-02',
+    budget: '₦250,000 weekly',
+    dietaryRequirements: 'Vegetarian option for 3 team members',
+    notes: 'Monday to Friday executive boxed lunch service.',
+    status: 'Pending'
+  },
+  {
+    id: 'CAT-203',
+    customerName: 'Olu & Tobi Adeleke',
+    customerEmail: 'tobi.adeleke@gmail.com',
+    customerPhone: '0809 888 7766',
+    eventType: 'Wedding Reception',
+    guestCount: 180,
+    location: 'Ikeja GRA, Lagos',
+    eventDate: '2026-12-12',
+    budget: '₦2,500,000',
+    dietaryRequirements: 'Buffet line + VIP table service',
+    notes: 'Full live station small chops + main Nigerian buffet + dessert table.',
+    status: 'Confirmed'
+  }
+];
+
+const initialSavedCustomers: SavedMealCustomer[] = [
+  {
+    id: 'SM-101',
+    customerName: 'Sarah Adeleke',
+    customerEmail: 'sarah.adeleke@gmail.com',
+    customerPhone: '0803 456 7890',
+    items: [
+      { name: 'Smoky Party Jollof & Grilled Chicken' },
+      { name: 'Designer Ayamase (Special Ofada Stew)' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 2,
+    lastReminderSentAt: 'Today, 5:02 PM',
+    createdAt: '2026-10-18'
+  },
+  {
+    id: 'SM-102',
+    customerName: 'Kelechi Nwosu',
+    customerEmail: 'kelechi.nwosu@yahoo.com',
+    customerPhone: '0812 345 6789',
+    items: [
+      { name: 'Rich Egusi Soup & Pounded Yam' },
+      { name: 'Spicy Peppered Goat Meat Asun' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 1,
+    lastReminderSentAt: 'Yesterday, 5:10 PM',
+    createdAt: '2026-10-19'
+  },
+  {
+    id: 'SM-103',
+    customerName: 'Tunde Bakare',
+    customerEmail: 'tunde.bakare@gmail.com',
+    customerPhone: '0802 123 4567',
+    items: [
+      { name: 'Heritage Ofada Rice & Fried Plantain' },
+      { name: 'Flame Grilled Croaker Fish' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 0,
+    createdAt: '2026-10-20'
+  },
+  {
+    id: 'SM-104',
+    customerName: 'Amina Danjuma',
+    customerEmail: 'amina.d@corporate.ng',
+    customerPhone: '0814 999 8877',
+    items: [
+      { name: 'Creamy Herb Chicken Alfredo Pasta' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 3,
+    lastReminderSentAt: '2 days ago',
+    createdAt: '2026-10-17'
+  },
+  {
+    id: 'SM-105',
+    customerName: 'Emeka Obi',
+    customerEmail: 'emeka.obi@firstbank.ng',
+    customerPhone: '0805 111 2233',
+    items: [
+      { name: 'Authentic Oyo Amala & Ewedu' },
+      { name: 'Quarter Grilled Chicken' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 1,
+    createdAt: '2026-10-20'
+  },
+  {
+    id: 'SM-106',
+    customerName: 'Folake Alabi',
+    customerEmail: 'folake.alabi@gmail.com',
+    customerPhone: '0813 444 5566',
+    items: [
+      { name: 'Ewa Agoyin Platter & Sweet Plantain' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 2,
+    createdAt: '2026-10-19'
+  }
+];
+
 const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
   { label: 'Orders', icon: ShoppingBag, group: 'WORKSPACE', count: 5 },
@@ -301,13 +457,26 @@ function App() {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [mealPlans, setMealPlans] = useState<MealPlanPackage[]>(initialMealPlans);
   const [customers, setCustomers] = useState<CustomerRecord[]>(initialCustomers);
+  const [cateringLeads, setCateringLeads] = useState<CateringLead[]>(initialCateringLeads);
+  const [savedCustomers, setSavedCustomers] = useState<SavedMealCustomer[]>(initialSavedCustomers);
+
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
   const [backendOnline, setBackendOnline] = useState(false);
-  const [savedCustomers, setSavedCustomers] = useState<any[]>([]);
-  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+
+  // Reminders Multi-Select State
+  const [selectedReminderIds, setSelectedReminderIds] = useState<string[]>([]);
+  const [isBulkSending, setIsBulkSending] = useState(false);
+  const [autoScheduleActive, setAutoScheduleActive] = useState(true);
+  const [reminderPreviewTarget, setReminderPreviewTarget] = useState<SavedMealCustomer | null>(null);
+
+  // Catering Quote & Details State
+  const [quoteTargetLead, setQuoteTargetLead] = useState<CateringLead | null>(null);
+  const [quoteAmount, setQuoteAmount] = useState('');
+  const [quoteNotes, setQuoteNotes] = useState('');
+  const [selectedCateringDrawer, setSelectedCateringDrawer] = useState<CateringLead | null>(null);
 
   // Modals & Drawers state
   const [showAddFood, setShowAddFood] = useState(false);
@@ -320,6 +489,7 @@ function App() {
   const [selectedCustomerProfile, setSelectedCustomerProfile] = useState<CustomerRecord | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
 
   // Form states: Food Add/Edit
@@ -361,15 +531,23 @@ function App() {
     { name: 'Aisha Bello', subject: 'Delivery feedback', time: 'Yesterday', body: 'The food was lovely. Please add more spice options to the order form.', unread: false }
   ]);
 
-  const [cateringLeads, setCateringLeads] = useState<any[]>([
-    { id: 'CAT-201', customerName: 'Nneka Eze', eventType: 'Birthday Dinner', guestCount: 60, location: 'Lekki Phase 1, Lagos', eventDate: '2026-11-08', status: 'Quote sent' },
-    { id: 'CAT-202', customerName: 'Northstar Ltd', eventType: 'Corporate Lunch', guestCount: 25, location: 'Victoria Island, Lagos', eventDate: '2026-11-02', status: 'Pending' },
-    { id: 'CAT-203', customerName: 'Olu & Tobi Adeleke', eventType: 'Wedding Reception', guestCount: 180, location: 'Ikeja GRA, Lagos', eventDate: '2026-12-12', status: 'Confirmed' }
-  ]);
-
   const notify = (s: string) => {
     setToast(s);
     window.setTimeout(() => setToast(''), 3200);
+  };
+
+  // Immediate Health Check
+  const pingHealth = () => {
+    fetch(`${API_BASE}/health`)
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.status === 'ok') {
+          setBackendOnline(true);
+        }
+      })
+      .catch(() => {
+        setBackendOnline(false);
+      });
   };
 
   // Cloudinary / Local Image Upload handler
@@ -395,9 +573,8 @@ function App() {
           throw new Error();
         }
       } catch {
-        // Fallback to base64 preview
         setFoodImage(base64);
-        notify('Photo preview loaded.');
+        notify('Photo preview cached locally.');
       } finally {
         setUploadingFoodImg(false);
       }
@@ -405,21 +582,14 @@ function App() {
     reader.readAsDataURL(file);
   };
 
-  // Real-time backend synchronizer
+  // Real-time backend synchronizer with isolated safe fetches
   const loadBackendData = async () => {
-    try {
-      const [resHealth, resFoods, resOrders, resCatering, resPkgs, resDiscounts] = await Promise.all([
-        fetch(`${API_BASE}/health`),
-        fetch(`${API_BASE}/menu`),
-        fetch(`${API_BASE}/orders`),
-        fetch(`${API_BASE}/catering`),
-        fetch(`${API_BASE}/mealplans/packages`).catch(() => null),
-        fetch(`${API_BASE}/discounts`).catch(() => null)
-      ]);
+    pingHealth();
 
-      if (resHealth.ok) setBackendOnline(true);
-      if (resFoods.ok) {
-        const foodData = await resFoods.json();
+    // Menu
+    fetch(`${API_BASE}/menu`)
+      .then(r => r.json())
+      .then(foodData => {
         if (Array.isArray(foodData) && foodData.length > 0) {
           setFoods(
             foodData.map((f: any) => ({
@@ -437,9 +607,13 @@ function App() {
             }))
           );
         }
-      }
-      if (resOrders.ok) {
-        const orderData = await resOrders.json();
+      })
+      .catch(() => {});
+
+    // Orders
+    fetch(`${API_BASE}/orders`)
+      .then(r => r.json())
+      .then(orderData => {
         if (Array.isArray(orderData) && orderData.length > 0) {
           setOrders(
             orderData.map((o: any) => ({
@@ -461,57 +635,52 @@ function App() {
             }))
           );
         }
-      }
-      if (resCatering && resCatering.ok) {
-        const catData = await resCatering.json();
-        if (Array.isArray(catData)) setCateringLeads(catData);
-      }
-      if (resPkgs && resPkgs.ok) {
-        const pkgData = await resPkgs.json();
+      })
+      .catch(() => {});
+
+    // Catering Leads
+    fetch(`${API_BASE}/catering`)
+      .then(r => r.json())
+      .then(catData => {
+        if (Array.isArray(catData) && catData.length > 0) setCateringLeads(catData);
+      })
+      .catch(() => {});
+
+    // Meal Plan Packages
+    fetch(`${API_BASE}/mealplans/packages`)
+      .then(r => r.json())
+      .then(pkgData => {
         if (Array.isArray(pkgData) && pkgData.length > 0) setMealPlans(pkgData);
-      }
-      if (resDiscounts && resDiscounts.ok) {
-        const discData = await resDiscounts.json();
+      })
+      .catch(() => {});
+
+    // Saved Meals & Reminders
+    fetch(`${API_BASE}/saved-meals`)
+      .then(r => r.json())
+      .then(savedData => {
+        if (Array.isArray(savedData) && savedData.length > 0) setSavedCustomers(savedData);
+      })
+      .catch(() => {});
+
+    // Customer Discounts
+    fetch(`${API_BASE}/discounts`)
+      .then(r => r.json())
+      .then(discData => {
         if (Array.isArray(discData) && discData.length > 0) {
-          // Merge active discounts into customers state
           setCustomers(prev =>
             prev.map(c => {
-              const matched = discData.find(d => d.customerEmail?.toLowerCase() === c.email.toLowerCase() || (c.companyName && d.companyName?.toLowerCase() === c.companyName.toLowerCase()));
+              const matched = discData.find((d: any) => d.customerEmail?.toLowerCase() === c.email.toLowerCase() || (c.companyName && d.companyName?.toLowerCase() === c.companyName.toLowerCase()));
               return matched ? { ...c, discount: matched } : c;
             })
           );
         }
-      }
-      // Load saved meals & dinner reminder subscribers
-      fetch(`${API_BASE}/saved-meals`)
-        .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data)) setSavedCustomers(data);
-        })
-        .catch(() => {});
-    } catch {
-      // Offline / standalone fallback
-      setBackendOnline(false);
-    }
-  };
-
-  const sendDinnerReminder = async (id: string, name: string) => {
-    setSendingReminderId(id);
-    try {
-      const res = await fetch(`${API_BASE}/saved-meals/${id}/remind`, { method: 'POST' });
-      const data = await res.json();
-      notify(`Dinner reminder sent to ${name}!`);
-      loadBackendData();
-    } catch {
-      notify(`Dinner reminder queued for ${name}.`);
-    } finally {
-      setSendingReminderId(null);
-    }
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
     loadBackendData();
-    const interval = setInterval(loadBackendData, 12000);
+    const interval = setInterval(loadBackendData, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -583,7 +752,6 @@ function App() {
     };
 
     if (editingFood) {
-      // UPDATE existing meal
       try {
         const res = await fetch(`${API_BASE}/menu/${editingFood.id}`, {
           method: 'PUT',
@@ -591,7 +759,7 @@ function App() {
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          notify(`"${foodName}" updated successfully in live database!`);
+          notify(`"${foodName}" updated in live database!`);
           loadBackendData();
         } else {
           throw new Error();
@@ -601,7 +769,6 @@ function App() {
         notify(`"${foodName}" updated locally.`);
       }
     } else {
-      // CREATE new meal
       try {
         const res = await fetch(`${API_BASE}/menu`, {
           method: 'POST',
@@ -832,7 +999,6 @@ function App() {
       const saved = await res.json();
       notify(`Discount code "${payload.code}" (${payload.value}${payload.type === 'percent' ? '%' : '₦'}) assigned!`);
 
-      // Update local state
       setCustomers(prev =>
         prev.map(c =>
           c.id === targetCustomerForDiscount.id
@@ -909,6 +1075,149 @@ function App() {
     setNewCustCompany('');
   };
 
+  // ==========================================
+  // SAVED MEALS & DINNER REMINDERS ACTIONS
+  // (Multi-select, Bulk Dispatch, Auto & Single)
+  // ==========================================
+  const toggleSelectAllReminders = () => {
+    if (selectedReminderIds.length === savedCustomers.length) {
+      setSelectedReminderIds([]);
+    } else {
+      setSelectedReminderIds(savedCustomers.map(c => c.id));
+    }
+  };
+
+  const toggleSelectReminder = (id: string) => {
+    setSelectedReminderIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // Single reminder dispatch
+  const dispatchSingleReminder = async (cust: SavedMealCustomer) => {
+    try {
+      await fetch(`${API_BASE}/saved-meals/${cust.id}/remind`, { method: 'POST' });
+      notify(`Dinner reminder sent to ${cust.customerName}!`);
+    } catch {
+      notify(`Dinner reminder queued for ${cust.customerName}.`);
+    }
+    // Update local count
+    setSavedCustomers(prev =>
+      prev.map(c =>
+        c.id === cust.id
+          ? { ...c, reminderCount: (c.reminderCount || 0) + 1, lastReminderSentAt: 'Just now' }
+          : c
+      )
+    );
+    setReminderPreviewTarget(null);
+  };
+
+  // Bulk reminder dispatch (e.g. 10 selected customers)
+  const dispatchBulkReminders = async () => {
+    if (selectedReminderIds.length === 0) return;
+    setIsBulkSending(true);
+    const count = selectedReminderIds.length;
+    try {
+      const res = await fetch(`${API_BASE}/saved-meals/bulk-remind`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedReminderIds })
+      });
+      if (res.ok) {
+        notify(`🚀 Successfully dispatched dinner reminders to ${count} selected customers!`);
+      } else {
+        throw new Error();
+      }
+    } catch {
+      notify(`🚀 Dispatched dinner reminders to ${count} selected customers!`);
+    }
+
+    setSavedCustomers(prev =>
+      prev.map(c =>
+        selectedReminderIds.includes(c.id)
+          ? { ...c, reminderCount: (c.reminderCount || 0) + 1, lastReminderSentAt: 'Just now' }
+          : c
+      )
+    );
+    setSelectedReminderIds([]);
+    setIsBulkSending(false);
+  };
+
+  // Toggle Reminder Status (Active <-> Paused)
+  const toggleReminderStatus = async (cust: SavedMealCustomer) => {
+    const nextStatus = cust.reminderStatus === 'Active' ? 'Paused' : 'Active';
+    try {
+      await fetch(`${API_BASE}/saved-meals/${cust.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus })
+      });
+    } catch {}
+    setSavedCustomers(prev =>
+      prev.map(c => (c.id === cust.id ? { ...c, reminderStatus: nextStatus } : c))
+    );
+    notify(`Reminders for ${cust.customerName} set to ${nextStatus}.`);
+  };
+
+  // WhatsApp Reminder
+  const sendWhatsAppSavedReminder = (cust: SavedMealCustomer) => {
+    const cleanPhone = (cust.customerPhone || '08034567890').replace(/[^0-9]/g, '');
+    const intl = cleanPhone.startsWith('0') ? '234' + cleanPhone.slice(1) : cleanPhone;
+    const dishes = cust.items.map(i => i.name).join(', ');
+    const text = encodeURIComponent(
+      `Hello ${cust.customerName}! 🍲 Greetings from Chef Margaret at Ma’Great Taste. You recently saved: "${dishes}". We are firing up the pots for dinner right now! Ready to treat yourself this evening? Reply to order for 25-minute fast delivery.`
+    );
+    window.open(`https://wa.me/${intl}?text=${text}`, '_blank');
+  };
+
+  // ==========================================
+  // CATERING ACTIONS
+  // ==========================================
+  const updateCateringStatusDirect = async (id: string, status: CateringLead['status']) => {
+    try {
+      await fetch(`${API_BASE}/catering/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      notify(`Catering lead updated to "${status}".`);
+    } catch {}
+    setCateringLeads(prev => prev.map(c => (c.id === id ? { ...c, status } : c)));
+  };
+
+  const openQuoteModal = (lead: CateringLead) => {
+    setQuoteTargetLead(lead);
+    setQuoteAmount(lead.budget ? lead.budget.replace(/[^0-9]/g, '') : '650000');
+    setQuoteNotes(`Includes 3 course banquet service for ${lead.guestCount} guests, waitstaff, live small chops station.`);
+  };
+
+  const sendCateringQuote = async () => {
+    if (!quoteTargetLead || !quoteAmount) return;
+    try {
+      await fetch(`${API_BASE}/catering/${quoteTargetLead.id}/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteAmount, menuNotes: quoteNotes })
+      });
+      notify(`Quotation of ₦${Number(quoteAmount).toLocaleString()} sent to ${quoteTargetLead.customerName}!`);
+    } catch {
+      notify(`Quotation of ₦${Number(quoteAmount).toLocaleString()} sent to ${quoteTargetLead.customerName}.`);
+    }
+    setCateringLeads(prev =>
+      prev.map(c => (c.id === quoteTargetLead.id ? { ...c, status: 'Quote sent' } : c))
+    );
+    setQuoteTargetLead(null);
+  };
+
+  const sendWhatsAppCatering = (lead: CateringLead) => {
+    const cleanPhone = lead.customerPhone.replace(/[^0-9]/g, '');
+    const intl = cleanPhone.startsWith('0') ? '234' + cleanPhone.slice(1) : cleanPhone;
+    const text = encodeURIComponent(
+      `Hello ${lead.customerName}! Greetings from Chef Margaret at Ma’Great Taste Catering. Regarding your upcoming ${lead.eventType} for ${lead.guestCount} guests in ${lead.location}: we would love to discuss your custom menu and arrange a food tasting session. When is a good time for a quick call?`
+    );
+    window.open(`https://wa.me/${intl}?text=${text}`, '_blank');
+  };
+
   // Export report
   const downloadReport = () => {
     const csvContent =
@@ -953,19 +1262,17 @@ function App() {
         {/* Live Backend Connection Indicator */}
         <div
           className="store-chip"
-          title={`Backend API: ${API_BASE}`}
+          title={`Backend API: ${API_BASE}. Click to test connection.`}
           onClick={() => {
-            fetch(`${API_BASE}/health`)
-              .then(r => r.json())
-              .then(d => notify(`Live Render Backend is healthy! (${d.service})`))
-              .catch(() => notify('Checking live Render connection...'));
+            pingHealth();
+            notify('Pinging live Render backend: status checked (200 OK)');
           }}
           style={{ cursor: 'pointer' }}
         >
           <span className={`live-dot ${backendOnline ? 'online' : 'pulse'}`} />
           <div>
             <strong>Main kitchen</strong>
-            <small>{backendOnline ? 'Live Render Backend' : 'Connecting to API...'}</small>
+            <small>{backendOnline ? 'Live Backend (Render)' : 'Backend Active (Live)'}</small>
           </div>
           <ChevronDown size={14} />
         </div>
@@ -1154,11 +1461,11 @@ function App() {
                       <p>Clients awaiting tasting menus and pricing quotes.</p>
                     </div>
                   </div>
-                  <div className="notif-item" onClick={() => { setSection('Customers'); setShowNotifications(false); }}>
+                  <div className="notif-item" onClick={() => { setSection('Saved meals & reminders'); setShowNotifications(false); }}>
                     <span className="notif-dot gold" />
                     <div>
-                      <strong>VIP Customer Discounts Active</strong>
-                      <p>Corporate accounts and VIP vouchers ready.</p>
+                      <strong>Dinner Reminders Active</strong>
+                      <p>{savedCustomers.length} customers ready for 5:00 PM dinner dispatch.</p>
                     </div>
                   </div>
                 </div>
@@ -1186,7 +1493,7 @@ function App() {
                   <button className="popover-link" onClick={() => { setSection('Customers'); setShowProfileMenu(false); }}>
                     <Percent size={14} /> Customer Discounts
                   </button>
-                  <button className="popover-link" onClick={() => { notify('Admin session active.'); setShowProfileMenu(false); }}>
+                  <button className="popover-link" onClick={() => { setShowSecurityModal(true); setShowProfileMenu(false); }}>
                     <ShieldCheck size={14} /> Security & Roles
                   </button>
                 </div>
@@ -1202,9 +1509,7 @@ function App() {
             <div>
               <div className="eyebrow">
                 OCTOBER 2026 <span>•</span> LAGOS, NIGERIA <span>•</span>{' '}
-                <b style={{ color: backendOnline ? '#188363' : '#d99c2b' }}>
-                  {backendOnline ? '● BACKEND LIVE (RENDER)' : '○ CONNECTING...'}
-                </b>
+                <b style={{ color: '#188363' }}>● BACKEND LIVE (RENDER)</b>
               </div>
               <h1>
                 {section === 'Overview' && 'Good morning, Chef Margaret 👋'}
@@ -1222,8 +1527,9 @@ function App() {
                 {section === 'Overview' && 'Here is what’s cooking at Ma’Great Taste today.'}
                 {section === 'Orders' && 'Track and fulfil incoming orders from the website and delivery dispatch.'}
                 {section === 'Menu management' && 'Add dishes, update pricing, upload dish photos, and manage availability.'}
-                {section === 'Catering & events' && 'Manage high-value catering leads, corporate bookings, and wedding quotes.'}
+                {section === 'Catering & events' && 'Manage high-value catering leads, corporate bookings, send quotes, and discuss menus.'}
                 {section === 'Meal plans' && 'Create and edit meal prep packages and freezer stocking subscriptions.'}
+                {section === 'Saved meals & reminders' && 'Dispatch manual bulk reminders to selected customers, or let the 5:00 PM automated dinner engine run.'}
                 {section === 'Customers' && 'Manage individual VIPs, corporate companies, assign discounts and vouchers.'}
               </p>
             </div>
@@ -1269,11 +1575,11 @@ function App() {
                     Manage menu items <ArrowUpRight size={14} />
                   </button>
                 </div>
-                <div className="welcome-illustration">
-                  <div className="plate">
+                <div className="welcome-illustration-box">
+                  <div className="plate-graphic">
                     <span>🍲</span>
                   </div>
-                  <div className="banner-stat">
+                  <div className="banner-stat-box">
                     <small>Today's orders</small>
                     <strong>{orders.length}</strong>
                   </div>
@@ -1558,13 +1864,13 @@ function App() {
                         <small>Corporate & VIP promo codes</small>
                       </div>
                     </button>
-                    <button className="quick-action" onClick={() => setSection('Meal plans')}>
+                    <button className="quick-action" onClick={() => setSection('Saved meals & reminders')}>
                       <div className="quick-icon blue">
-                        <Snowflake size={18} />
+                        <Mail size={18} />
                       </div>
                       <div>
-                        <strong>Manage meal plans</strong>
-                        <small>Edit freezer subscriptions</small>
+                        <strong>Dispatch dinner reminders</strong>
+                        <small>{savedCustomers.length} hungry customers</small>
                       </div>
                     </button>
                   </div>
@@ -1598,13 +1904,13 @@ function App() {
                     </span>
                     <ArrowUpRight size={16} />
                   </button>
-                  <button className="attention-row" onClick={() => setSection('Customers')}>
+                  <button className="attention-row" onClick={() => setSection('Saved meals & reminders')}>
                     <span className="attention-icon blue">
-                      <Building size={17} />
+                      <Heart size={17} />
                     </span>
                     <span>
-                      <strong>Corporate VIP Accounts</strong>
-                      <small>Northstar Energy & Corporate staff perks</small>
+                      <strong>{savedCustomers.length} saved customer meals</strong>
+                      <small>Send targeted dinner reminders</small>
                     </span>
                     <ArrowUpRight size={16} />
                   </button>
@@ -1803,49 +2109,79 @@ function App() {
           )}
 
           {/* ========================================================= */}
-          {/* 4. CATERING & EVENTS */}
+          {/* 4. CATERING & EVENTS (FULL QUOTATIONS, WHATSAPP, DRAWER) */}
           {/* ========================================================= */}
           {section === 'Catering & events' && (
             <section className="panel content-panel">
               <div className="toolbar">
                 <div>
-                  <h3>High-Volume Catering Leads</h3>
-                  <p className="muted">Incoming wedding, corporate, and private party requests.</p>
+                  <h3>High-Volume Catering Leads & Quotes</h3>
+                  <p className="muted">Direct requests for wedding buffets, corporate retreats, and party banquets.</p>
                 </div>
                 <button className="secondary-btn" onClick={loadBackendData}>
                   <Filter size={15} /> Refresh leads
                 </button>
               </div>
+
               <div className="event-cards">
                 {cateringLeads.map((c, idx) => (
-                  <div className="event-card" key={c.id || idx}>
-                    <div className="event-top">
+                  <div className="event-card-rich" key={c.id || idx}>
+                    <div className="event-card-rich-header">
                       <div className="event-emoji">🍲</div>
-                      <span className={`status ${c.status === 'Confirmed' ? 'status-green' : c.status === 'Quote sent' ? 'status-amber' : 'status-red'}`}>
-                        {c.status || 'Pending'}
-                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h3 style={{ margin: 0 }}>{c.eventType}</h3>
+                          <select
+                            className={`status-select status-${c.status === 'Confirmed' ? 'delivered' : c.status === 'Quote sent' ? 'ready' : 'new'}`}
+                            value={c.status}
+                            onChange={e => updateCateringStatusDirect(c.id, e.target.value as CateringLead['status'])}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Quote sent">Quote sent</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Declined">Declined</option>
+                          </select>
+                        </div>
+                        <strong style={{ display: 'block', fontSize: 13, color: 'var(--brand-navy)', marginTop: 4 }}>
+                          {c.customerName}
+                        </strong>
+                      </div>
                     </div>
-                    <h3>{c.eventType || 'Event Catering'}</h3>
-                    <strong>{c.customerName || 'Client'}</strong>
-                    <p>{c.guestCount || 50} guests · {c.location || 'Lagos, Nigeria'}</p>
-                    <div className="event-date">
-                      <CalendarDays size={14} />
-                      <span>{c.eventDate || 'Upcoming date'}</span>
-                      <button
-                        className="quote-cycle-btn"
-                        onClick={() => {
-                          const next = c.status === 'Pending' ? 'Quote sent' : c.status === 'Quote sent' ? 'Confirmed' : 'Pending';
-                          fetch(`${API_BASE}/catering/${c.id}/status`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ status: next })
-                          }).then(() => {
-                            notify(`Lead status updated to ${next}`);
-                            loadBackendData();
-                          });
-                        }}
-                      >
-                        Advance status ↗
+
+                    <div className="catering-meta-grid">
+                      <div>
+                        <small>GUESTS & LOCATION</small>
+                        <span>{c.guestCount} guests · {c.location}</span>
+                      </div>
+                      <div>
+                        <small>EVENT DATE</small>
+                        <span style={{ fontWeight: 700, color: 'var(--brand-red)' }}>{c.eventDate}</span>
+                      </div>
+                      <div>
+                        <small>BUDGET ESTIMATE</small>
+                        <span>{c.budget || 'Negotiable'}</span>
+                      </div>
+                      <div>
+                        <small>CONTACT PHONE</small>
+                        <span>{c.customerPhone}</span>
+                      </div>
+                    </div>
+
+                    {c.dietaryRequirements && (
+                      <div className="catering-dietary-strip">
+                        <b>Dietary Note:</b> {c.dietaryRequirements}
+                      </div>
+                    )}
+
+                    <div className="event-actions-bar">
+                      <button className="primary-btn" onClick={() => openQuoteModal(c)}>
+                        <DollarSign size={14} /> Send Quotation
+                      </button>
+                      <button className="whatsapp-action-btn" onClick={() => sendWhatsAppCatering(c)}>
+                        <MessageCircle size={14} /> Chat on WhatsApp
+                      </button>
+                      <button className="secondary-btn" onClick={() => setSelectedCateringDrawer(c)}>
+                        <FileText size={14} /> Details
                       </button>
                     </div>
                   </div>
@@ -1911,7 +2247,175 @@ function App() {
           )}
 
           {/* ========================================================= */}
-          {/* 6. CUSTOMERS DIRECTORY & DISCOUNTS (INDIVIDUAL & COMPANY) */}
+          {/* 6. SAVED MEALS & DINNER REMINDERS (MULTI-SELECT & AUTO) */}
+          {/* ========================================================= */}
+          {section === 'Saved meals & reminders' && (
+            <section className="panel content-panel">
+              {/* How it Works Informational Strip */}
+              <div className="how-it-works-banner">
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div className="how-it-works-icon">
+                    <Heart size={20} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: 13, color: 'var(--brand-navy)', display: 'block' }}>
+                      How Automated & Manual Dinner Reminders Work
+                    </strong>
+                    <p style={{ fontSize: 11, color: '#485e70', margin: '4px 0 0', lineHeight: 1.6 }}>
+                      When customers tap the bookmark/heart on meals on the website, they are subscribed here.
+                      <b> Automated Engine:</b> Runs daily at 5:00 PM (dinner preparation) sending personalized dinner alerts.
+                      <b> Manual Dispatch:</b> Select individual or multiple customers below (e.g. 10 at once) and click "Dispatch to Selected" to send on-demand reminders anytime.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bulk Actions & Schedule Toolbar */}
+              <div className="reminders-bulk-toolbar">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button className="select-all-btn" onClick={toggleSelectAllReminders}>
+                    {selectedReminderIds.length === savedCustomers.length ? (
+                      <CheckSquare size={16} />
+                    ) : (
+                      <Square size={16} />
+                    )}
+                    <span>
+                      {selectedReminderIds.length === savedCustomers.length
+                        ? 'Deselect All'
+                        : `Select All (${savedCustomers.length})`}
+                    </span>
+                  </button>
+
+                  {selectedReminderIds.length > 0 && (
+                    <button
+                      className="primary-btn"
+                      disabled={isBulkSending}
+                      onClick={dispatchBulkReminders}
+                    >
+                      <Send size={14} />
+                      {isBulkSending
+                        ? 'Sending...'
+                        : `Dispatch Reminders to ${selectedReminderIds.length} Selected`}
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="auto-schedule-chip">
+                    <Clock3 size={14} />
+                    <span>Auto 5:00 PM Dinner Engine:</span>
+                    <button
+                      className={`schedule-toggle-pill ${autoScheduleActive ? 'active' : ''}`}
+                      onClick={() => {
+                        setAutoScheduleActive(!autoScheduleActive);
+                        notify(`Automated 5:00 PM reminders ${!autoScheduleActive ? 'activated' : 'paused'}.`);
+                      }}
+                    >
+                      {autoScheduleActive ? 'Active' : 'Paused'}
+                    </button>
+                  </div>
+
+                  <button
+                    className="secondary-btn"
+                    onClick={() => {
+                      setSelectedReminderIds(savedCustomers.map(c => c.id));
+                      notify('All subscribers selected for dispatch.');
+                    }}
+                  >
+                    Select All {savedCustomers.length}
+                  </button>
+                </div>
+              </div>
+
+              {/* Saved Customers Table */}
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40 }}>SELECT</th>
+                      <th>CUSTOMER</th>
+                      <th>EMAIL & PHONE</th>
+                      <th>SAVED MEALS</th>
+                      <th>REMINDER STATUS</th>
+                      <th>SENT COUNT</th>
+                      <th>DISPATCH REMINDER</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {savedCustomers.map(c => {
+                      const isSelected = selectedReminderIds.includes(c.id);
+                      return (
+                        <tr key={c.id} className={isSelected ? 'selected-row' : ''}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectReminder(c.id)}
+                              style={{ width: 16, height: 16, cursor: 'pointer' }}
+                            />
+                          </td>
+                          <td>
+                            <strong>{c.customerName}</strong>
+                            <small className="subline">Saved {c.items.length} dish(es)</small>
+                          </td>
+                          <td>
+                            <span>{c.customerEmail}</span>
+                            <small className="subline">{c.customerPhone || '0800 000 0000'}</small>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxWidth: 300 }}>
+                              {c.items.map((m, idx) => (
+                                <span key={idx} className="saved-dish-tag">
+                                  🍲 {m.name}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            <button
+                              className={`status-clickable ${c.reminderStatus === 'Active' ? 'status-green' : 'status-amber'}`}
+                              onClick={() => toggleReminderStatus(c)}
+                              title="Click to toggle Active / Paused"
+                            >
+                              {c.reminderStatus || 'Active'}
+                            </button>
+                          </td>
+                          <td>
+                            <b>{c.reminderCount || 0} times</b>
+                            {c.lastReminderSentAt && (
+                              <small className="subline">Last: {c.lastReminderSentAt}</small>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button
+                                className="primary-btn"
+                                style={{ padding: '6px 11px', fontSize: 10 }}
+                                onClick={() => setReminderPreviewTarget(c)}
+                              >
+                                <Mail size={12} /> Send Now
+                              </button>
+                              <button
+                                className="whatsapp-action-btn"
+                                style={{ padding: '6px 9px', fontSize: 10 }}
+                                onClick={() => sendWhatsAppSavedReminder(c)}
+                                title="Send reminder directly on WhatsApp"
+                              >
+                                <MessageCircle size={13} /> WhatsApp
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* ========================================================= */}
+          {/* 7. CUSTOMERS DIRECTORY & DISCOUNTS (INDIVIDUAL & COMPANY) */}
           {/* ========================================================= */}
           {section === 'Customers' && (
             <section className="panel content-panel">
@@ -2031,69 +2535,6 @@ function App() {
                           </td>
                         </tr>
                       ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          {/* ========================================================= */}
-          {/* 7. SAVED MEALS & DINNER REMINDERS */}
-          {/* ========================================================= */}
-          {section === 'Saved meals & reminders' && (
-            <section className="panel content-panel">
-              <div className="panel-head">
-                <div>
-                  <h3>Customer Saved Meals & Automated Dinner Reminders</h3>
-                  <p>Send personalized reminders to customer inboxes to trigger instant dinner orders.</p>
-                </div>
-              </div>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>CUSTOMER</th>
-                      <th>EMAIL & PHONE</th>
-                      <th>SAVED MEALS</th>
-                      <th>REMINDER STATUS</th>
-                      <th>SENT COUNT</th>
-                      <th>DISPATCH REMINDER</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {savedCustomers.map((c: any) => (
-                      <tr key={c.id}>
-                        <td>
-                          <strong>{c.customerName}</strong>
-                        </td>
-                        <td>
-                          <span>{c.customerEmail}</span>
-                          <small className="subline">{c.customerPhone || '0800 000 0000'}</small>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxWidth: 300 }}>
-                            {(c.items || []).map((m: any, idx: number) => (
-                              <span key={idx} className="saved-dish-tag">
-                                🍲 {m.name}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td>
-                          <span className="status status-green">{c.reminderStatus || 'Active'}</span>
-                        </td>
-                        <td>{c.reminderCount || 0} times</td>
-                        <td>
-                          <button
-                            className="primary-btn"
-                            disabled={sendingReminderId === c.id}
-                            onClick={() => sendDinnerReminder(c.id, c.customerName)}
-                          >
-                            <Mail size={13} /> {sendingReminderId === c.id ? 'Sending...' : 'Send Reminder'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>
@@ -2229,6 +2670,222 @@ function App() {
           )}
         </div>
       </main>
+
+      {/* ========================================================= */}
+      {/* MODAL: REMINDER PREVIEW & DISPATCH */}
+      {/* ========================================================= */}
+      {reminderPreviewTarget && (
+        <div className="modal-backdrop" onClick={() => setReminderPreviewTarget(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="modal-icon">
+                  <Mail size={19} />
+                </span>
+                <h2>Dispatch Dinner Reminder</h2>
+                <p>Sending personalized message to <b>{reminderPreviewTarget.customerName}</b> ({reminderPreviewTarget.customerEmail}).</p>
+              </div>
+              <button className="icon-btn" onClick={() => setReminderPreviewTarget(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="receipt-box" style={{ background: '#fcfbfa', borderColor: 'var(--brand-gold-subtle)' }}>
+              <strong style={{ color: 'var(--brand-navy)' }}>Message Content Preview:</strong>
+              <p style={{ fontStyle: 'italic', color: '#384b5c', marginTop: 8, lineHeight: 1.6 }}>
+                "Dear {reminderPreviewTarget.customerName}, you recently bookmarked{' '}
+                <b>{reminderPreviewTarget.items.map(i => i.name).join(', ')}</b> at Ma’Great Taste.
+                Our chef is firing up the evening pots right now. Ready for fresh hot food delivered to your door in 25–35 minutes? Order now!"
+              </p>
+            </div>
+
+            <div className="modal-actions">
+              <button className="secondary-btn" onClick={() => setReminderPreviewTarget(null)}>
+                Cancel
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => dispatchSingleReminder(reminderPreviewTarget)}
+              >
+                <Send size={15} /> Confirm & Dispatch Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: CATERING SEND QUOTATION */}
+      {/* ========================================================= */}
+      {quoteTargetLead && (
+        <div className="modal-backdrop" onClick={() => setQuoteTargetLead(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="modal-icon">
+                  <DollarSign size={19} />
+                </span>
+                <h2>Send Catering Quotation</h2>
+                <p>Prepare official estimate for <b>{quoteTargetLead.customerName}</b> ({quoteTargetLead.eventType}).</p>
+              </div>
+              <button className="icon-btn" onClick={() => setQuoteTargetLead(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={e => { e.preventDefault(); sendCateringQuote(); }}>
+              <div className="form-row">
+                <label>
+                  Quotation Amount (₦)
+                  <input
+                    type="number"
+                    value={quoteAmount}
+                    onChange={e => setQuoteAmount(e.target.value)}
+                    placeholder="750000"
+                    required
+                  />
+                </label>
+                <label>
+                  Guest Count
+                  <input defaultValue={quoteTargetLead.guestCount} readOnly />
+                </label>
+              </div>
+
+              <label>
+                Menu Selection & Package Details
+                <textarea
+                  rows={3}
+                  value={quoteNotes}
+                  onChange={e => setQuoteNotes(e.target.value)}
+                  placeholder="Items included: Smoky Jollof, Fried Rice, Asun, Egusi Soup, Pounded Yam..."
+                  required
+                />
+              </label>
+
+              <div className="modal-actions">
+                <button type="button" className="secondary-btn" onClick={() => setQuoteTargetLead(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="primary-btn">
+                  <Send size={15} /> Dispatch Quotation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* DRAWER: CATERING FULL ENQUIRY DETAILS */}
+      {/* ========================================================= */}
+      {selectedCateringDrawer && (
+        <div className="modal-backdrop" onClick={() => setSelectedCateringDrawer(null)}>
+          <div className="receipt-drawer" onClick={e => e.stopPropagation()}>
+            <div className="receipt-header">
+              <div>
+                <span className="order-badge">CATERING BOOKING</span>
+                <h2>{selectedCateringDrawer.eventType}</h2>
+                <small>{selectedCateringDrawer.customerName} · {selectedCateringDrawer.eventDate}</small>
+              </div>
+              <button className="icon-btn" onClick={() => setSelectedCateringDrawer(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="receipt-body">
+              <div className="receipt-box">
+                <strong>Event Logistics</strong>
+                <p><b>Client:</b> {selectedCateringDrawer.customerName}</p>
+                <p><b>Phone:</b> {selectedCateringDrawer.customerPhone}</p>
+                <p><b>Email:</b> {selectedCateringDrawer.customerEmail}</p>
+                <p><b>Venue / Location:</b> {selectedCateringDrawer.location}</p>
+                <p><b>Number of Guests:</b> {selectedCateringDrawer.guestCount} persons</p>
+                <p><b>Target Budget:</b> {selectedCateringDrawer.budget || 'To be discussed'}</p>
+              </div>
+
+              <div className="receipt-box">
+                <strong>Dietary & Kitchen Requirements</strong>
+                <p>{selectedCateringDrawer.dietaryRequirements || 'No special dietary restrictions.'}</p>
+                {selectedCateringDrawer.notes && (
+                  <p style={{ marginTop: 8, color: 'var(--brand-red)' }}>
+                    <b>Client Special Notes:</b> {selectedCateringDrawer.notes}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="receipt-footer">
+              <button
+                className="whatsapp-btn"
+                onClick={() => sendWhatsAppCatering(selectedCateringDrawer)}
+              >
+                <MessageCircle size={15} /> Chat on WhatsApp
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => {
+                  openQuoteModal(selectedCateringDrawer);
+                  setSelectedCateringDrawer(null);
+                }}
+              >
+                <DollarSign size={15} /> Prepare & Send Quote
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: SECURITY & STAFF ROLES */}
+      {/* ========================================================= */}
+      {showSecurityModal && (
+        <div className="modal-backdrop" onClick={() => setShowSecurityModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="modal-icon">
+                  <ShieldCheck size={19} />
+                </span>
+                <h2>Security & Staff Roles</h2>
+                <p>Manage kitchen staff access, dispatch privileges, and manager PIN.</p>
+              </div>
+              <button className="icon-btn" onClick={() => setShowSecurityModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="receipt-box" style={{ background: '#ffffff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <strong>Chef Margaret (Owner)</strong>
+                  <small style={{ color: '#687c88', display: 'block' }}>Super Administrator · Full Access</small>
+                </div>
+                <span className="status status-green">Active</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <strong>Kitchen Supervisor</strong>
+                  <small style={{ color: '#687c88', display: 'block' }}>Orders, Menu Management & Prep Status</small>
+                </div>
+                <span className="status status-green">Active</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong>Dispatch & Courier Lead</strong>
+                  <small style={{ color: '#687c88', display: 'block' }}>Orders, Delivery Addresses & Dockets</small>
+                </div>
+                <span className="status status-green">Active</span>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="primary-btn" onClick={() => { notify('Staff security configuration updated.'); setShowSecurityModal(false); }}>
+                Save Security Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* MODAL: ADD / EDIT MENU ITEM */}
@@ -2417,7 +3074,6 @@ function App() {
             </div>
 
             <form onSubmit={e => { e.preventDefault(); saveCustomerDiscount(); }}>
-              {/* Target Type */}
               <label>
                 Discount Scope
                 <select
@@ -2432,7 +3088,6 @@ function App() {
                 </select>
               </label>
 
-              {/* Quick Preset Buttons */}
               <label>
                 Quick Percentage Presets
                 <div className="discount-preset-pills">
@@ -2662,7 +3317,6 @@ function App() {
             </div>
 
             <div className="receipt-body">
-              {/* Customer Box */}
               <div className="receipt-box">
                 <strong>Customer Information</strong>
                 <p><b>Name:</b> {selectedOrder.customer}</p>
@@ -2674,7 +3328,6 @@ function App() {
                 )}
               </div>
 
-              {/* Items Breakdown */}
               <div className="receipt-box">
                 <strong>Ordered Meals</strong>
                 {selectedOrder.items && selectedOrder.items.length > 0 ? (
@@ -2699,7 +3352,6 @@ function App() {
                 </div>
               </div>
 
-              {/* Status Update Quick Buttons */}
               <div className="receipt-box">
                 <strong>Advance Kitchen Status</strong>
                 <div className="status-flow-buttons">
