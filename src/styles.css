@@ -98,7 +98,8 @@ button {
   align-items: center;
   gap: 12px;
   padding: 0 6px 18px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(90deg, #c6381e 0%, #d99c2b 50%, #3f6e8e 100%) 1;
 }
 
 .brand-logo-frame {
@@ -106,12 +107,18 @@ button {
   height: 44px;
   border-radius: 12px;
   background: #ffffff;
-  border: 1px solid var(--line);
+  border: 1.5px solid rgba(198, 56, 30, 0.25);
   display: grid;
   place-items: center;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(24, 40, 56, 0.08);
+  box-shadow: 0 3px 12px rgba(24, 40, 56, 0.1), 0 0 0 2px rgba(217, 156, 43, 0.2);
   flex-shrink: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.brand:hover .brand-logo-frame {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 18px rgba(198, 56, 30, 0.25), 0 0 0 2px var(--brand-red);
 }
 
 .brand-logo-img {
