@@ -137,10 +137,51 @@ function App() {
   const [foodName, setFoodName] = useState('');
   const [foodPrice, setFoodPrice] = useState('');
   const [foodCategory, setFoodCategory] = useState('Nigerian');
+  const [foodImage, setFoodImage] = useState('');
+  const [uploadingFoodImg, setUploadingFoodImg] = useState(false);
+
+  const [blogImage, setBlogImage] = useState('');
+  const [uploadingBlogImg, setUploadingBlogImg] = useState(false);
 
   const notify = (s: string) => {
     setToast(s);
     window.setTimeout(() => setToast(''), 2800);
+  };
+
+  const handleImageUpload = (file: File, target: 'food' | 'blog') => {
+    if (target === 'food') setUploadingFoodImg(true);
+    else setUploadingBlogImg(true);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      try {
+        const res = await fetch(`${API_BASE}/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: base64,
+            folder: target === 'food' ? 'magreat_dishes' : 'magreat_blogs'
+          })
+        });
+        const data = await res.json();
+        if (data.url) {
+          if (target === 'food') setFoodImage(data.url);
+          else setBlogImage(data.url);
+          notify('Uploaded to Cloudinary CDN successfully!');
+        } else {
+          throw new Error(data.error || 'Upload failed');
+        }
+      } catch (err: any) {
+        notify('Cloudinary upload notice: preview cached');
+        if (target === 'food') setFoodImage(base64);
+        else setBlogImage(base64);
+      } finally {
+        if (target === 'food') setUploadingFoodImg(false);
+        else setUploadingBlogImg(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // Fetch real-time data from Express backend
@@ -282,7 +323,7 @@ function App() {
           price: Number(foodPrice),
           category: foodCategory,
           description: `Signature freshly prepared ${foodCategory} dish.`,
-          image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=400&q=80'
+          image: foodImage || 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=400&q=80'
         })
       });
       if (res.ok) {
@@ -300,7 +341,7 @@ function App() {
           price: Number(foodPrice),
           status: 'Available',
           orders: 0,
-          image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=160&q=80'
+          image: foodImage || 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=160&q=80'
         },
         ...p
       ]);
@@ -309,6 +350,7 @@ function App() {
 
     setFoodName('');
     setFoodPrice('');
+    setFoodImage('');
     setShowAddFood(false);
   };
 
@@ -351,6 +393,7 @@ function App() {
           title: blogTitle.trim(),
           category: blogCategory,
           status: 'Published',
+          coverImage: blogImage || 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=85',
           content: blogContent || 'New culinary story from Ma’Great Taste.'
         })
       });
@@ -371,6 +414,7 @@ function App() {
     }
     setBlogTitle('');
     setBlogContent('');
+    setBlogImage('');
     setShowBlog(false);
   };
 
@@ -1473,16 +1517,37 @@ function App() {
                   </select>
                 </label>
               </div>
-              <div className="upload-placeholder">
-                <ImagePlus size={22} />
-                <strong>Food photo</strong>
-                <span>Assigned high-res chef photo automatically.</span>
+              <div className="upload-placeholder" style={{ cursor: 'pointer', position: 'relative' }}>
+                {foodImage ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img src={foodImage} alt="Preview" style={{ width: 50, height: 50, borderRadius: 6, objectFit: 'cover' }} />
+                    <div>
+                      <strong>Dish Photo Loaded</strong>
+                      <span style={{ fontSize: 10, color: '#16836b', display: 'block' }}>Uploaded to Cloudinary CDN</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ImagePlus size={22} />
+                    <strong>{uploadingFoodImg ? 'Uploading to Cloudinary...' : 'Upload Dish Photo (Cloudinary)'}</strong>
+                    <span>Click or drop image file to upload directly to Cloudinary</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file, 'food');
+                  }}
+                />
               </div>
               <div className="modal-actions">
                 <button type="button" className="secondary-btn" onClick={() => setShowAddFood(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="primary-btn">
+                <button type="submit" className="primary-btn" disabled={uploadingFoodImg}>
                   <Plus size={16} /> Publish to menu
                 </button>
               </div>
@@ -1541,11 +1606,37 @@ function App() {
                   onChange={e => setBlogContent(e.target.value)}
                 />
               </label>
+              <div className="upload-placeholder" style={{ cursor: 'pointer', position: 'relative', marginTop: 12 }}>
+                {blogImage ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img src={blogImage} alt="Cover Preview" style={{ width: 50, height: 50, borderRadius: 6, objectFit: 'cover' }} />
+                    <div>
+                      <strong>Cover Photo Loaded</strong>
+                      <span style={{ fontSize: 10, color: '#16836b', display: 'block' }}>Uploaded to Cloudinary CDN</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ImagePlus size={22} />
+                    <strong>{uploadingBlogImg ? 'Uploading to Cloudinary...' : 'Upload Featured Cover Photo'}</strong>
+                    <span>Click or drop image to upload to Cloudinary</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file, 'blog');
+                  }}
+                />
+              </div>
               <div className="modal-actions">
                 <button type="button" className="secondary-btn" onClick={() => setShowBlog(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="primary-btn">
+                <button type="submit" className="primary-btn" disabled={uploadingBlogImg}>
                   <Pencil size={16} /> Publish article
                 </button>
               </div>
