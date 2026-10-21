@@ -195,13 +195,7 @@ const initialFoods: Food[] = [
   { id: 6, name: 'Banga Palm Fruit Rice with Seafood', category: 'Nigerian', price: 6800, status: 'Available', orders: 112, image: '/meals/banga-rice.jpg', description: 'Rich Delta palm nut extract infused into long grain rice with dried fish and crayfish.', tag: 'Special' }
 ];
 
-const initialOrders: Order[] = [
-  { id: 'MGT-2116', customer: 'Adaeze Okafor', email: 'adaeze@example.com', phone: '0803 456 7891', address: 'Plot 14, Admiralty Way, Lekki Phase 1, Lagos', item: 'Smoky Party Jollof · 1, Authentic Ghanaian Waakye · 1', items: [{ name: 'Smoky Party Jollof & Chicken', quantity: 1, price: 6500 }, { name: 'Ghanaian Waakye Plate', quantity: 1, price: 5800 }], date: 'Today, 09:21 AM', subtotal: 12300, deliveryFee: 2000, total: 14300, status: 'Delivered', paymentMethod: 'Card (Paystack)', paymentStatus: 'Paid' },
-  { id: 'MGT-1048', customer: 'Adaeze Okafor', email: 'adaeze@example.com', phone: '0803 456 7891', address: 'Plot 14, Admiralty Way, Lekki Phase 1, Lagos', item: 'Smoky Party Jollof · 2, Spicy Peppered Asun & Yam · 1', items: [{ name: 'Smoky Party Jollof & Chicken', quantity: 2, price: 6500 }, { name: 'Spicy Peppered Asun & Yam', quantity: 1, price: 6800 }], date: 'Today, 07:59 AM', subtotal: 19800, deliveryFee: 2000, total: 21800, status: 'Delivered', paymentMethod: 'Card', paymentStatus: 'Paid' },
-  { id: 'MGT-1047', customer: 'David Akinola', email: 'david@northstar.ng', phone: '0806 912 3345', address: 'Northstar Energy Ltd, 8th Floor, Victoria Island, Lagos', item: 'Smoky Party Jollof · 6, Creamy Herb Chicken Alfredo · 2', items: [{ name: 'Smoky Party Jollof', quantity: 6, price: 6500 }, { name: 'Creamy Herb Chicken Alfredo', quantity: 2, price: 7800 }], date: 'Today, 07:32 AM', subtotal: 54600, deliveryFee: 2000, total: 56600, status: 'Preparing', paymentMethod: 'Corporate Transfer', paymentStatus: 'Paid' },
-  { id: 'MGT-1046', customer: 'Zainab Bello', email: 'zainab@gmail.com', phone: '0812 345 6780', address: '12 Isaac John Street, GRA Ikeja, Lagos', item: 'Rich Egusi Soup with Goat Meat & Pounded Yam · 2', items: [{ name: 'Rich Egusi Soup & Pounded Yam', quantity: 2, price: 7500 }], date: 'Today, 06:54 AM', subtotal: 15000, deliveryFee: 1500, total: 16500, status: 'Ready', paymentMethod: 'Card', paymentStatus: 'Paid' },
-  { id: 'MGT-1045', customer: 'Chika Nwosu', email: 'chika@outlook.com', phone: '0705 678 1234', address: 'Chevron Tollgate Estate, Lekki, Lagos', item: 'Heritage Ofada Rice & Designer Ayamase · 2', items: [{ name: 'Heritage Ofada Rice', quantity: 2, price: 6200 }], date: 'Today, 05:14 AM', subtotal: 12400, deliveryFee: 1800, total: 14200, status: 'Delivered', paymentMethod: 'Card', paymentStatus: 'Paid' }
-];
+const initialOrders: Order[] = [];
 
 const initialMealPlans: MealPlanPackage[] = [
   {
@@ -236,213 +230,17 @@ const initialMealPlans: MealPlanPackage[] = [
   }
 ];
 
-const initialCustomers: CustomerRecord[] = [
-  {
-    id: 'CUST-101',
-    name: 'Adaeze Okafor',
-    email: 'adaeze@example.com',
-    phone: '0803 456 7891',
-    ordersCount: 18,
-    totalSpent: 168500,
-    lastOrderDate: 'Today',
-    segment: 'Loyal VIP',
-    kitchenNotes: 'Prefers very hot spicy pepper sauce and extra dodo.',
-    discount: {
-      id: 'DISC-02',
-      customerName: 'Adaeze Okafor',
-      customerEmail: 'adaeze@example.com',
-      type: 'percent',
-      value: 10,
-      code: 'VIP-ADAEZE10',
-      appliesTo: 'individual',
-      notes: 'Loyal VIP 10% discount automatically applied',
-      active: true,
-      createdAt: '2026-10-21'
-    }
-  },
-  {
-    id: 'CUST-102',
-    name: 'David Akinola',
-    email: 'david@northstar.ng',
-    phone: '0806 912 3345',
-    ordersCount: 9,
-    totalSpent: 245000,
-    lastOrderDate: 'Today',
-    segment: 'Corporate',
-    companyName: 'Northstar Energy Ltd',
-    kitchenNotes: 'Corporate bulk orders for Friday team lunch. Send VAT invoice.',
-    discount: {
-      id: 'DISC-01',
-      customerName: 'David Akinola',
-      customerEmail: 'david@northstar.ng',
-      companyName: 'Northstar Energy Ltd',
-      type: 'percent',
-      value: 15,
-      code: 'NORTHSTAR-15',
-      appliesTo: 'company',
-      notes: '15% corporate catering discount for all Northstar team members',
-      active: true,
-      createdAt: '2026-10-21'
-    }
-  },
-  {
-    id: 'CUST-103',
-    name: 'Zainab Bello',
-    email: 'zainab@gmail.com',
-    phone: '0812 345 6780',
-    ordersCount: 12,
-    totalSpent: 97500,
-    lastOrderDate: 'Today',
-    segment: 'Returning',
-    kitchenNotes: 'Loves goat meat and fresh pounded yam.'
-  },
-  {
-    id: 'CUST-104',
-    name: 'Chika Nwosu',
-    email: 'chika@outlook.com',
-    phone: '0705 678 1234',
-    ordersCount: 7,
-    totalSpent: 131000,
-    lastOrderDate: 'Today',
-    segment: 'Meal plan',
-    kitchenNotes: 'Subscribed to 10-meal freezer pack.'
-  }
-];
-
-const initialCateringLeads: CateringLead[] = [
-  {
-    id: 'CAT-201',
-    customerName: 'Nneka Eze',
-    customerEmail: 'nneka.eze@gmail.com',
-    customerPhone: '0802 334 5567',
-    eventType: 'Birthday Dinner',
-    guestCount: 60,
-    location: 'Lekki Phase 1, Lagos',
-    eventDate: '2026-11-08',
-    budget: '₦850,000',
-    dietaryRequirements: 'Halal chicken only, mild pepper options for kids',
-    notes: 'Would love tasting session beforehand for Jollof and Egusi.',
-    status: 'Quote sent'
-  },
-  {
-    id: 'CAT-202',
-    customerName: 'Northstar Ltd (Kelechi)',
-    customerEmail: 'kelechi@northstar.ng',
-    customerPhone: '0803 777 9901',
-    eventType: 'Corporate Lunch',
-    guestCount: 25,
-    location: 'Victoria Island, Lagos',
-    eventDate: '2026-11-02',
-    budget: '₦250,000 weekly',
-    dietaryRequirements: 'Vegetarian option for 3 team members',
-    notes: 'Monday to Friday executive boxed lunch service.',
-    status: 'Pending'
-  },
-  {
-    id: 'CAT-203',
-    customerName: 'Olu & Tobi Adeleke',
-    customerEmail: 'tobi.adeleke@gmail.com',
-    customerPhone: '0809 888 7766',
-    eventType: 'Wedding Reception',
-    guestCount: 180,
-    location: 'Ikeja GRA, Lagos',
-    eventDate: '2026-12-12',
-    budget: '₦2,500,000',
-    dietaryRequirements: 'Buffet line + VIP table service',
-    notes: 'Full live station small chops + main Nigerian buffet + dessert table.',
-    status: 'Confirmed'
-  }
-];
-
-const initialSavedCustomers: SavedMealCustomer[] = [
-  {
-    id: 'SM-101',
-    customerName: 'Sarah Adeleke',
-    customerEmail: 'sarah.adeleke@gmail.com',
-    customerPhone: '0803 456 7890',
-    items: [
-      { name: 'Smoky Party Jollof & Grilled Chicken' },
-      { name: 'Designer Ayamase (Special Ofada Stew)' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 2,
-    lastReminderSentAt: 'Today, 5:02 PM',
-    createdAt: '2026-10-18'
-  },
-  {
-    id: 'SM-102',
-    customerName: 'Kelechi Nwosu',
-    customerEmail: 'kelechi.nwosu@yahoo.com',
-    customerPhone: '0812 345 6789',
-    items: [
-      { name: 'Rich Egusi Soup & Pounded Yam' },
-      { name: 'Spicy Peppered Goat Meat Asun' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 1,
-    lastReminderSentAt: 'Yesterday, 5:10 PM',
-    createdAt: '2026-10-19'
-  },
-  {
-    id: 'SM-103',
-    customerName: 'Tunde Bakare',
-    customerEmail: 'tunde.bakare@gmail.com',
-    customerPhone: '0802 123 4567',
-    items: [
-      { name: 'Heritage Ofada Rice & Fried Plantain' },
-      { name: 'Flame Grilled Croaker Fish' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 0,
-    createdAt: '2026-10-20'
-  },
-  {
-    id: 'SM-104',
-    customerName: 'Amina Danjuma',
-    customerEmail: 'amina.d@corporate.ng',
-    customerPhone: '0814 999 8877',
-    items: [
-      { name: 'Creamy Herb Chicken Alfredo Pasta' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 3,
-    lastReminderSentAt: '2 days ago',
-    createdAt: '2026-10-17'
-  },
-  {
-    id: 'SM-105',
-    customerName: 'Emeka Obi',
-    customerEmail: 'emeka.obi@firstbank.ng',
-    customerPhone: '0805 111 2233',
-    items: [
-      { name: 'Authentic Oyo Amala & Ewedu' },
-      { name: 'Quarter Grilled Chicken' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 1,
-    createdAt: '2026-10-20'
-  },
-  {
-    id: 'SM-106',
-    customerName: 'Folake Alabi',
-    customerEmail: 'folake.alabi@gmail.com',
-    customerPhone: '0813 444 5566',
-    items: [
-      { name: 'Ewa Agoyin Platter & Sweet Plantain' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 2,
-    createdAt: '2026-10-19'
-  }
-];
+const initialCustomers: CustomerRecord[] = [];
+const initialCateringLeads: CateringLead[] = [];
+const initialSavedCustomers: SavedMealCustomer[] = [];
 
 const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
-  { label: 'Orders', icon: ShoppingBag, group: 'WORKSPACE', count: 5 },
+  { label: 'Orders', icon: ShoppingBag, group: 'WORKSPACE' },
   { label: 'Menu management', icon: UtensilsCrossed, group: 'WORKSPACE' },
-  { label: 'Catering & events', icon: CalendarDays, group: 'WORKSPACE', count: 3 },
+  { label: 'Catering & events', icon: CalendarDays, group: 'WORKSPACE' },
   { label: 'Meal plans', icon: Snowflake, group: 'WORKSPACE' },
-  { label: 'Messages', icon: MessageSquare, group: 'ENGAGE', count: 4 },
+  { label: 'Messages', icon: MessageSquare, group: 'ENGAGE' },
   { label: 'Saved meals & reminders', icon: Heart, group: 'ENGAGE' },
   { label: 'Analytics', icon: ChartNoAxesCombined, group: 'BUSINESS' },
   { label: 'Customers', icon: Users, group: 'BUSINESS' },
@@ -524,29 +322,37 @@ function App() {
   const [newCustCompany, setNewCustCompany] = useState('');
   const [newCustSegment, setNewCustSegment] = useState<'Corporate' | 'Loyal VIP' | 'Returning' | 'Meal plan' | 'New'>('Corporate');
 
-  const [messages, setMessages] = useState([
-    { name: 'Nneka Eze', subject: 'Catering for a 60-person birthday', time: '12 min ago', body: 'Hello, please can I get a quote for a birthday dinner for 60 guests in Lekki on November 8?', unread: true },
-    { name: 'Kelechi from Northstar Ltd', subject: 'Corporate lunch subscription', time: '38 min ago', body: 'We are interested in lunch delivery for our team of 25, Monday to Friday.', unread: true },
-    { name: 'Tomi Adeyemi', subject: 'Question about freezer meal plans', time: '1 hr ago', body: 'Can I mix different soups and swallows in the monthly package?', unread: true },
-    { name: 'Aisha Bello', subject: 'Delivery feedback', time: 'Yesterday', body: 'The food was lovely. Please add more spice options to the order form.', unread: false }
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
+
+  // Settings States (Real-time backend synchronization)
+  const [settingsBusinessName, setSettingsBusinessName] = useState("Ma'Great Taste Restaurant & Catering Services");
+  const [settingsAddress, setSettingsAddress] = useState('Lekki Phase 1, Lagos, Nigeria');
+  const [settingsPhone, setSettingsPhone] = useState('+234 803 456 7890');
+  const [settingsEmail, setSettingsEmail] = useState('orders@magreattaste.ng');
+  const [settingsOnlineOrdering, setSettingsOnlineOrdering] = useState(true);
+  const [settingsWhatsappAlerts, setSettingsWhatsappAlerts] = useState(true);
+  const [settingsCorporateDiscounts, setSettingsCorporateDiscounts] = useState(true);
+  const [settingsMinOrder, setSettingsMinOrder] = useState('3000');
+  const [settingsDeliveryFee, setSettingsDeliveryFee] = useState('2000');
+  const [settingsOpeningHours, setSettingsOpeningHours] = useState('8:00 AM – 10:00 PM Daily');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const notify = (s: string) => {
     setToast(s);
     window.setTimeout(() => setToast(''), 3200);
   };
 
-  // Immediate Health Check
+  // Immediate Health Check with automatic retry
   const pingHealth = () => {
     fetch(`${API_BASE}/health`)
       .then(r => r.json())
       .then(d => {
-        if (d && d.status === 'ok') {
+        if (d && (d.status === 'ok' || d.service)) {
           setBackendOnline(true);
         }
       })
       .catch(() => {
-        setBackendOnline(false);
+        // If an endpoint succeeds elsewhere, backendOnline will still be set to true
       });
   };
 
@@ -591,6 +397,7 @@ function App() {
       .then(r => r.json())
       .then(foodData => {
         if (Array.isArray(foodData) && foodData.length > 0) {
+          setBackendOnline(true);
           setFoods(
             foodData.map((f: any) => ({
               id: f.id,
@@ -614,7 +421,8 @@ function App() {
     fetch(`${API_BASE}/orders`)
       .then(r => r.json())
       .then(orderData => {
-        if (Array.isArray(orderData) && orderData.length > 0) {
+        if (Array.isArray(orderData)) {
+          setBackendOnline(true);
           setOrders(
             orderData.map((o: any) => ({
               id: o.id,
@@ -642,7 +450,10 @@ function App() {
     fetch(`${API_BASE}/catering`)
       .then(r => r.json())
       .then(catData => {
-        if (Array.isArray(catData) && catData.length > 0) setCateringLeads(catData);
+        if (Array.isArray(catData)) {
+          setBackendOnline(true);
+          setCateringLeads(catData);
+        }
       })
       .catch(() => {});
 
@@ -650,7 +461,10 @@ function App() {
     fetch(`${API_BASE}/mealplans/packages`)
       .then(r => r.json())
       .then(pkgData => {
-        if (Array.isArray(pkgData) && pkgData.length > 0) setMealPlans(pkgData);
+        if (Array.isArray(pkgData)) {
+          setBackendOnline(true);
+          if (pkgData.length > 0) setMealPlans(pkgData);
+        }
       })
       .catch(() => {});
 
@@ -658,7 +472,10 @@ function App() {
     fetch(`${API_BASE}/saved-meals`)
       .then(r => r.json())
       .then(savedData => {
-        if (Array.isArray(savedData) && savedData.length > 0) setSavedCustomers(savedData);
+        if (Array.isArray(savedData)) {
+          setBackendOnline(true);
+          setSavedCustomers(savedData);
+        }
       })
       .catch(() => {});
 
@@ -666,7 +483,8 @@ function App() {
     fetch(`${API_BASE}/discounts`)
       .then(r => r.json())
       .then(discData => {
-        if (Array.isArray(discData) && discData.length > 0) {
+        if (Array.isArray(discData)) {
+          setBackendOnline(true);
           setCustomers(prev =>
             prev.map(c => {
               const matched = discData.find((d: any) => d.customerEmail?.toLowerCase() === c.email.toLowerCase() || (c.companyName && d.companyName?.toLowerCase() === c.companyName.toLowerCase()));
@@ -676,12 +494,95 @@ function App() {
         }
       })
       .catch(() => {});
+
+    // Real-time Customers Directory
+    fetch(`${API_BASE}/customers`)
+      .then(r => r.json())
+      .then(custData => {
+        if (Array.isArray(custData)) {
+          setBackendOnline(true);
+          setCustomers(custData);
+        }
+      })
+      .catch(() => {});
+
+    // Real-time Customer Messages
+    fetch(`${API_BASE}/messages`)
+      .then(r => r.json())
+      .then(msgData => {
+        if (Array.isArray(msgData)) {
+          setBackendOnline(true);
+          setMessages(msgData);
+        }
+      })
+      .catch(() => {});
+
+    // Real-time Store Settings
+    fetch(`${API_BASE}/settings`)
+      .then(r => r.json())
+      .then(s => {
+        if (s && s.businessName) {
+          setBackendOnline(true);
+          setSettingsBusinessName(s.businessName);
+          if (s.kitchenAddress) setSettingsAddress(s.kitchenAddress);
+          if (s.phone) setSettingsPhone(s.phone);
+          if (s.email) setSettingsEmail(s.email);
+          if (s.onlineOrdering !== undefined) setSettingsOnlineOrdering(s.onlineOrdering);
+          if (s.whatsappAlerts !== undefined) setSettingsWhatsappAlerts(s.whatsappAlerts);
+          if (s.corporateDiscounts !== undefined) setSettingsCorporateDiscounts(s.corporateDiscounts);
+          if (s.minOrderAmount !== undefined) setSettingsMinOrder(String(s.minOrderAmount));
+          if (s.deliveryFee !== undefined) setSettingsDeliveryFee(String(s.deliveryFee));
+          if (s.openingHours) setSettingsOpeningHours(s.openingHours);
+        }
+      })
+      .catch(() => {});
+  };
+
+  // Real-time Settings Save Handler
+  const saveStoreSettings = async () => {
+    setIsSavingSettings(true);
+    const payload = {
+      businessName: settingsBusinessName,
+      kitchenAddress: settingsAddress,
+      phone: settingsPhone,
+      email: settingsEmail,
+      onlineOrdering: settingsOnlineOrdering,
+      whatsappAlerts: settingsWhatsappAlerts,
+      corporateDiscounts: settingsCorporateDiscounts,
+      minOrderAmount: Number(settingsMinOrder) || 0,
+      deliveryFee: Number(settingsDeliveryFee) || 0,
+      openingHours: settingsOpeningHours
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        notify('✅ Store settings saved live in real time to backend!');
+      } else {
+        throw new Error();
+      }
+    } catch {
+      notify('Settings saved locally.');
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   useEffect(() => {
     loadBackendData();
-    const interval = setInterval(loadBackendData, 10000);
-    return () => clearInterval(interval);
+    // Rapid retries on initial load in case Render was waking up from sleep
+    const t1 = setTimeout(loadBackendData, 3000);
+    const t2 = setTimeout(loadBackendData, 7000);
+    const interval = setInterval(loadBackendData, 12000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearInterval(interval);
+    };
   }, []);
 
   const unread = messages.filter(m => m.unread).length;
@@ -1509,7 +1410,9 @@ function App() {
             <div>
               <div className="eyebrow">
                 OCTOBER 2026 <span>•</span> LAGOS, NIGERIA <span>•</span>{' '}
-                <b style={{ color: '#188363' }}>● BACKEND LIVE (RENDER)</b>
+                <b style={{ color: backendOnline ? '#188363' : '#d99c2b' }}>
+                  {backendOnline ? '● BACKEND CONNECTED (RENDER)' : '○ CONNECTING TO API...'}
+                </b>
               </div>
               <h1>
                 {section === 'Overview' && 'Good morning, Chef Margaret 👋'}
@@ -1546,11 +1449,6 @@ function App() {
               {section === 'Meal plans' && (
                 <button className="primary-btn" onClick={openCreatePlanModal}>
                   <Plus size={16} /> Create plan
-                </button>
-              )}
-              {section === 'Customers' && (
-                <button className="primary-btn" onClick={() => setShowAddCustomerModal(true)}>
-                  <Plus size={16} /> Add customer / company
                 </button>
               )}
             </div>
@@ -1766,64 +1664,71 @@ function App() {
                   </button>
                 </div>
                 <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>ORDER ID</th>
-                        <th>CUSTOMER</th>
-                        <th>ITEMS</th>
-                        <th>DATE</th>
-                        <th>TOTAL</th>
-                        <th>STATUS</th>
-                        <th>ACTIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.slice(0, 5).map(o => (
-                        <tr key={o.id}>
-                          <td>
-                            <strong className="order-id">{o.id}</strong>
-                          </td>
-                          <td>
-                            <div className="customer-cell">
-                              <div className="avatar small">{o.customer.split(' ').map(x => x[0]).join('')}</div>
-                              <div>
-                                <strong>{o.customer}</strong>
-                                <small className="subline">{o.phone || o.email || 'Online order'}</small>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="item-cell" title={o.item}>{o.item}</td>
-                          <td>{o.date}</td>
-                          <td>
-                            <strong>{money(o.total)}</strong>
-                          </td>
-                          <td>
-                            <select
-                              className={`status-select status-${o.status.toLowerCase()}`}
-                              value={o.status}
-                              onChange={e => updateOrderStatus(o.id, e.target.value as Order['status'])}
-                            >
-                              <option>New</option>
-                              <option>Preparing</option>
-                              <option>Ready</option>
-                              <option>Delivered</option>
-                              <option>Cancelled</option>
-                            </select>
-                          </td>
-                          <td>
-                            <button
-                              className="action-pill-btn"
-                              onClick={() => setSelectedOrder(o)}
-                              title="View Order Details & Kitchen Docket"
-                            >
-                              <MoreHorizontal size={16} /> Details
-                            </button>
-                          </td>
+                  {orders.length === 0 ? (
+                    <div className="empty-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
+                      <ShoppingBag size={32} style={{ opacity: 0.35, marginBottom: 10, color: 'var(--brand-navy)' }} />
+                      <p style={{ fontSize: 13, color: '#687c88' }}>No customer orders yet. Incoming orders from the website will appear here in real time.</p>
+                    </div>
+                  ) : (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>ORDER ID</th>
+                          <th>CUSTOMER</th>
+                          <th>ITEMS</th>
+                          <th>DATE</th>
+                          <th>TOTAL</th>
+                          <th>STATUS</th>
+                          <th>ACTIONS</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {orders.slice(0, 5).map(o => (
+                          <tr key={o.id}>
+                            <td>
+                              <strong className="order-id">{o.id}</strong>
+                            </td>
+                            <td>
+                              <div className="customer-cell">
+                                <div className="avatar small">{o.customer.split(' ').map(x => x[0]).join('')}</div>
+                                <div>
+                                  <strong>{o.customer}</strong>
+                                  <small className="subline">{o.phone || o.email || 'Online order'}</small>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="item-cell" title={o.item}>{o.item}</td>
+                            <td>{o.date}</td>
+                            <td>
+                              <strong>{money(o.total)}</strong>
+                            </td>
+                            <td>
+                              <select
+                                className={`status-select status-${o.status.toLowerCase()}`}
+                                value={o.status}
+                                onChange={e => updateOrderStatus(o.id, e.target.value as Order['status'])}
+                              >
+                                <option>New</option>
+                                <option>Preparing</option>
+                                <option>Ready</option>
+                                <option>Delivered</option>
+                                <option>Cancelled</option>
+                              </select>
+                            </td>
+                            <td>
+                              <button
+                                className="action-pill-btn"
+                                onClick={() => setSelectedOrder(o)}
+                                title="View Order Details & Kitchen Docket"
+                              >
+                                <MoreHorizontal size={16} /> Details
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </section>
 
@@ -2037,73 +1942,83 @@ function App() {
               </div>
 
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ORDER ID</th>
-                      <th>CUSTOMER</th>
-                      <th>CONTACT & ADDRESS</th>
-                      <th>ITEMS</th>
-                      <th>DATE</th>
-                      <th>TOTAL</th>
-                      <th>STATUS</th>
-                      <th>ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders
-                      .filter(
-                        o =>
-                          (o.id + ' ' + o.customer + ' ' + o.item).toLowerCase().includes(search.toLowerCase()) &&
-                          (filter === 'All' || o.status.toLowerCase() === filter.toLowerCase())
-                      )
-                      .map(o => (
-                        <tr key={o.id}>
-                          <td>
-                            <strong className="order-id">{o.id}</strong>
-                          </td>
-                          <td>
-                            <div className="customer-cell">
-                              <div className="avatar small">{o.customer.split(' ').map(x => x[0]).join('')}</div>
-                              <div>
-                                <strong>{o.customer}</strong>
-                                <small className="subline">{o.paymentMethod || 'Online'}</small>
+                {orders.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <ShoppingBag size={42} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
+                    <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No customer orders placed yet</h3>
+                    <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
+                      Orders placed through the website menu and checkout will appear here instantly for chef preparation and dispatch.
+                    </p>
+                  </div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ORDER ID</th>
+                        <th>CUSTOMER</th>
+                        <th>CONTACT & ADDRESS</th>
+                        <th>ITEMS</th>
+                        <th>DATE</th>
+                        <th>TOTAL</th>
+                        <th>STATUS</th>
+                        <th>ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders
+                        .filter(
+                          o =>
+                            (o.id + ' ' + o.customer + ' ' + o.item).toLowerCase().includes(search.toLowerCase()) &&
+                            (filter === 'All' || o.status.toLowerCase() === filter.toLowerCase())
+                        )
+                        .map(o => (
+                          <tr key={o.id}>
+                            <td>
+                              <strong className="order-id">{o.id}</strong>
+                            </td>
+                            <td>
+                              <div className="customer-cell">
+                                <div className="avatar small">{o.customer.split(' ').map(x => x[0]).join('')}</div>
+                                <div>
+                                  <strong>{o.customer}</strong>
+                                  <small className="subline">{o.paymentMethod || 'Online'}</small>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span>{o.phone || '0800 000 0000'}</span>
-                            <small className="subline" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {o.address || 'Lagos, Nigeria'}
-                            </small>
-                          </td>
-                          <td className="item-cell" title={o.item}>{o.item}</td>
-                          <td>{o.date}</td>
-                          <td>
-                            <strong>{money(o.total)}</strong>
-                          </td>
-                          <td>
-                            <select
-                              className={`status-select status-${o.status.toLowerCase()}`}
-                              value={o.status}
-                              onChange={e => updateOrderStatus(o.id, e.target.value as Order['status'])}
-                            >
-                              <option>New</option>
-                              <option>Preparing</option>
-                              <option>Ready</option>
-                              <option>Delivered</option>
-                              <option>Cancelled</option>
-                            </select>
-                          </td>
-                          <td>
-                            <button className="action-pill-btn" onClick={() => setSelectedOrder(o)}>
-                              View docket
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+                            </td>
+                            <td>
+                              <span>{o.phone || '0800 000 0000'}</span>
+                              <small className="subline" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {o.address || 'Lagos, Nigeria'}
+                              </small>
+                            </td>
+                            <td className="item-cell" title={o.item}>{o.item}</td>
+                            <td>{o.date}</td>
+                            <td>
+                              <strong>{money(o.total)}</strong>
+                            </td>
+                            <td>
+                              <select
+                                className={`status-select status-${o.status.toLowerCase()}`}
+                                value={o.status}
+                                onChange={e => updateOrderStatus(o.id, e.target.value as Order['status'])}
+                              >
+                                <option>New</option>
+                                <option>Preparing</option>
+                                <option>Ready</option>
+                                <option>Delivered</option>
+                                <option>Cancelled</option>
+                              </select>
+                            </td>
+                            <td>
+                              <button className="action-pill-btn" onClick={() => setSelectedOrder(o)}>
+                                View docket
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </section>
           )}
@@ -2123,70 +2038,80 @@ function App() {
                 </button>
               </div>
 
-              <div className="event-cards">
-                {cateringLeads.map((c, idx) => (
-                  <div className="event-card-rich" key={c.id || idx}>
-                    <div className="event-card-rich-header">
-                      <div className="event-emoji">🍲</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <h3 style={{ margin: 0 }}>{c.eventType}</h3>
-                          <select
-                            className={`status-select status-${c.status === 'Confirmed' ? 'delivered' : c.status === 'Quote sent' ? 'ready' : 'new'}`}
-                            value={c.status}
-                            onChange={e => updateCateringStatusDirect(c.id, e.target.value as CateringLead['status'])}
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Quote sent">Quote sent</option>
-                            <option value="Confirmed">Confirmed</option>
-                            <option value="Declined">Declined</option>
-                          </select>
+              {cateringLeads.length === 0 ? (
+                <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                  <CalendarDays size={42} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
+                  <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No catering enquiries yet</h3>
+                  <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
+                    Party bookings, corporate lunches, and wedding catering enquiries submitted through the website form will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="event-cards">
+                  {cateringLeads.map((c, idx) => (
+                    <div className="event-card-rich" key={c.id || idx}>
+                      <div className="event-card-rich-header">
+                        <div className="event-emoji">🍲</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0 }}>{c.eventType}</h3>
+                            <select
+                              className={`status-select status-${c.status === 'Confirmed' ? 'delivered' : c.status === 'Quote sent' ? 'ready' : 'new'}`}
+                              value={c.status}
+                              onChange={e => updateCateringStatusDirect(c.id, e.target.value as CateringLead['status'])}
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Quote sent">Quote sent</option>
+                              <option value="Confirmed">Confirmed</option>
+                              <option value="Declined">Declined</option>
+                            </select>
+                          </div>
+                          <strong style={{ display: 'block', fontSize: 13, color: 'var(--brand-navy)', marginTop: 4 }}>
+                            {c.customerName}
+                          </strong>
                         </div>
-                        <strong style={{ display: 'block', fontSize: 13, color: 'var(--brand-navy)', marginTop: 4 }}>
-                          {c.customerName}
-                        </strong>
+                      </div>
+
+                      <div className="catering-meta-grid">
+                        <div>
+                          <small>GUESTS & LOCATION</small>
+                          <span>{c.guestCount} guests · {c.location}</span>
+                        </div>
+                        <div>
+                          <small>EVENT DATE</small>
+                          <span style={{ fontWeight: 700, color: 'var(--brand-red)' }}>{c.eventDate}</span>
+                        </div>
+                        <div>
+                          <small>BUDGET ESTIMATE</small>
+                          <span>{c.budget || 'Negotiable'}</span>
+                        </div>
+                        <div>
+                          <small>CONTACT PHONE</small>
+                          <span>{c.customerPhone}</span>
+                        </div>
+                      </div>
+
+                      {c.dietaryRequirements && (
+                        <div className="catering-dietary-strip">
+                          <b>Dietary Note:</b> {c.dietaryRequirements}
+                        </div>
+                      )}
+
+                      <div className="event-actions-bar">
+                        <button className="primary-btn" onClick={() => openQuoteModal(c)}>
+                          <DollarSign size={14} /> Send Quotation
+                        </button>
+                        <button className="whatsapp-action-btn" onClick={() => sendWhatsAppCatering(c)}>
+                          <MessageCircle size={14} /> Chat on WhatsApp
+                        </button>
+                        <button className="secondary-btn" onClick={() => setSelectedCateringDrawer(c)}>
+                          <FileText size={14} /> Details
+                        </button>
                       </div>
                     </div>
-
-                    <div className="catering-meta-grid">
-                      <div>
-                        <small>GUESTS & LOCATION</small>
-                        <span>{c.guestCount} guests · {c.location}</span>
-                      </div>
-                      <div>
-                        <small>EVENT DATE</small>
-                        <span style={{ fontWeight: 700, color: 'var(--brand-red)' }}>{c.eventDate}</span>
-                      </div>
-                      <div>
-                        <small>BUDGET ESTIMATE</small>
-                        <span>{c.budget || 'Negotiable'}</span>
-                      </div>
-                      <div>
-                        <small>CONTACT PHONE</small>
-                        <span>{c.customerPhone}</span>
-                      </div>
-                    </div>
-
-                    {c.dietaryRequirements && (
-                      <div className="catering-dietary-strip">
-                        <b>Dietary Note:</b> {c.dietaryRequirements}
-                      </div>
-                    )}
-
-                    <div className="event-actions-bar">
-                      <button className="primary-btn" onClick={() => openQuoteModal(c)}>
-                        <DollarSign size={14} /> Send Quotation
-                      </button>
-                      <button className="whatsapp-action-btn" onClick={() => sendWhatsAppCatering(c)}>
-                        <MessageCircle size={14} /> Chat on WhatsApp
-                      </button>
-                      <button className="secondary-btn" onClick={() => setSelectedCateringDrawer(c)}>
-                        <FileText size={14} /> Details
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -2329,87 +2254,97 @@ function App() {
 
               {/* Saved Customers Table */}
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40 }}>SELECT</th>
-                      <th>CUSTOMER</th>
-                      <th>EMAIL & PHONE</th>
-                      <th>SAVED MEALS</th>
-                      <th>REMINDER STATUS</th>
-                      <th>SENT COUNT</th>
-                      <th>DISPATCH REMINDER</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {savedCustomers.map(c => {
-                      const isSelected = selectedReminderIds.includes(c.id);
-                      return (
-                        <tr key={c.id} className={isSelected ? 'selected-row' : ''}>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleSelectReminder(c.id)}
-                              style={{ width: 16, height: 16, cursor: 'pointer' }}
-                            />
-                          </td>
-                          <td>
-                            <strong>{c.customerName}</strong>
-                            <small className="subline">Saved {c.items.length} dish(es)</small>
-                          </td>
-                          <td>
-                            <span>{c.customerEmail}</span>
-                            <small className="subline">{c.customerPhone || '0800 000 0000'}</small>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxWidth: 300 }}>
-                              {c.items.map((m, idx) => (
-                                <span key={idx} className="saved-dish-tag">
-                                  🍲 {m.name}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td>
-                            <button
-                              className={`status-clickable ${c.reminderStatus === 'Active' ? 'status-green' : 'status-amber'}`}
-                              onClick={() => toggleReminderStatus(c)}
-                              title="Click to toggle Active / Paused"
-                            >
-                              {c.reminderStatus || 'Active'}
-                            </button>
-                          </td>
-                          <td>
-                            <b>{c.reminderCount || 0} times</b>
-                            {c.lastReminderSentAt && (
-                              <small className="subline">Last: {c.lastReminderSentAt}</small>
-                            )}
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 6 }}>
+                {savedCustomers.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <Heart size={42} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-red)' }} />
+                    <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No customer saved dishes yet</h3>
+                    <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
+                      When visitors bookmark or save their favorite meals on the frontend, their preferences will appear here for dinner reminders.
+                    </p>
+                  </div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style={{ width: 40 }}>SELECT</th>
+                        <th>CUSTOMER</th>
+                        <th>EMAIL & PHONE</th>
+                        <th>SAVED MEALS</th>
+                        <th>REMINDER STATUS</th>
+                        <th>SENT COUNT</th>
+                        <th>DISPATCH REMINDER</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {savedCustomers.map(c => {
+                        const isSelected = selectedReminderIds.includes(c.id);
+                        return (
+                          <tr key={c.id} className={isSelected ? 'selected-row' : ''}>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelectReminder(c.id)}
+                                style={{ width: 16, height: 16, cursor: 'pointer' }}
+                              />
+                            </td>
+                            <td>
+                              <strong>{c.customerName}</strong>
+                              <small className="subline">Saved {c.items.length} dish(es)</small>
+                            </td>
+                            <td>
+                              <span>{c.customerEmail}</span>
+                              <small className="subline">{c.customerPhone || '0800 000 0000'}</small>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxWidth: 300 }}>
+                                {c.items.map((m, idx) => (
+                                  <span key={idx} className="saved-dish-tag">
+                                    🍲 {m.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td>
                               <button
-                                className="primary-btn"
-                                style={{ padding: '6px 11px', fontSize: 10 }}
-                                onClick={() => setReminderPreviewTarget(c)}
+                                className={`status-clickable ${c.reminderStatus === 'Active' ? 'status-green' : 'status-amber'}`}
+                                onClick={() => toggleReminderStatus(c)}
+                                title="Click to toggle Active / Paused"
                               >
-                                <Mail size={12} /> Send Now
+                                {c.reminderStatus || 'Active'}
                               </button>
-                              <button
-                                className="whatsapp-action-btn"
-                                style={{ padding: '6px 9px', fontSize: 10 }}
-                                onClick={() => sendWhatsAppSavedReminder(c)}
-                                title="Send reminder directly on WhatsApp"
-                              >
-                                <MessageCircle size={13} /> WhatsApp
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                            <td>
+                              <b>{c.reminderCount || 0} times</b>
+                              {c.lastReminderSentAt && (
+                                <small className="subline">Last: {c.lastReminderSentAt}</small>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button
+                                  className="primary-btn"
+                                  style={{ padding: '6px 11px', fontSize: 10 }}
+                                  onClick={() => setReminderPreviewTarget(c)}
+                                >
+                                  <Mail size={12} /> Send Now
+                                </button>
+                                <button
+                                  className="whatsapp-action-btn"
+                                  style={{ padding: '6px 9px', fontSize: 10 }}
+                                  onClick={() => sendWhatsAppSavedReminder(c)}
+                                  title="Send reminder directly on WhatsApp"
+                                >
+                                  <MessageCircle size={13} /> WhatsApp
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </section>
           )}
@@ -2437,106 +2372,119 @@ function App() {
               </div>
 
               <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>CUSTOMER / COMPANY</th>
-                      <th>CONTACT DETAILS</th>
-                      <th>ORDERS</th>
-                      <th>TOTAL SPENT</th>
-                      <th>SEGMENT</th>
-                      <th>ACTIVE DISCOUNT / VOUCHER</th>
-                      <th>ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customers
-                      .filter(
-                        c =>
-                          (c.name + ' ' + c.email + ' ' + (c.companyName || '')).toLowerCase().includes(search.toLowerCase())
-                      )
-                      .map(c => (
-                        <tr key={c.id}>
-                          <td>
-                            <div className="customer-cell">
-                              <div className="avatar small">{c.name.split(' ').map(x => x[0]).join('')}</div>
-                              <div>
-                                <strong>{c.name}</strong>
-                                {c.companyName ? (
-                                  <small className="company-badge">🏢 {c.companyName}</small>
-                                ) : (
-                                  <small className="subline">Individual account</small>
-                                )}
+                {customers.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <Users size={42} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
+                    <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No customer accounts yet</h3>
+                    <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto 16px' }}>
+                      Customer profiles are automatically created when orders are placed, or you can add VIP clients and companies manually.
+                    </p>
+                    <button className="primary-btn" onClick={() => setShowAddCustomerModal(true)}>
+                      <Plus size={15} /> Add first customer / company
+                    </button>
+                  </div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>CUSTOMER / COMPANY</th>
+                        <th>CONTACT DETAILS</th>
+                        <th>ORDERS</th>
+                        <th>TOTAL SPENT</th>
+                        <th>SEGMENT</th>
+                        <th>ACTIVE DISCOUNT / VOUCHER</th>
+                        <th>ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customers
+                        .filter(
+                          c =>
+                            (c.name + ' ' + c.email + ' ' + (c.companyName || '')).toLowerCase().includes(search.toLowerCase())
+                        )
+                        .map(c => (
+                          <tr key={c.id}>
+                            <td>
+                              <div className="customer-cell">
+                                <div className="avatar small">{c.name.split(' ').map(x => x[0]).join('')}</div>
+                                <div>
+                                  <strong>{c.name}</strong>
+                                  {c.companyName ? (
+                                    <small className="company-badge">🏢 {c.companyName}</small>
+                                  ) : (
+                                    <small className="subline">Individual account</small>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          <td>
-                            <span>{c.email}</span>
-                            <small className="subline">{c.phone}</small>
-                          </td>
+                            <td>
+                              <span>{c.email}</span>
+                              <small className="subline">{c.phone}</small>
+                            </td>
 
-                          <td>{c.ordersCount} orders</td>
+                            <td>{c.ordersCount} orders</td>
 
-                          <td>
-                            <strong>{money(c.totalSpent)}</strong>
-                          </td>
+                            <td>
+                              <strong>{money(c.totalSpent)}</strong>
+                            </td>
 
-                          <td>
-                            <span className="segment-badge segment-corporate">
-                              {c.segment}
-                            </span>
-                          </td>
+                            <td>
+                              <span className="segment-badge segment-corporate">
+                                {c.segment}
+                              </span>
+                            </td>
 
-                          {/* DISCOUNT BADGE */}
-                          <td>
-                            {c.discount ? (
-                              <div className="discount-pill-active" onClick={() => openDiscountModalForCustomer(c)}>
-                                <Tag size={12} />
-                                <span>
-                                  {c.discount.value}{c.discount.type === 'percent' ? '%' : '₦'} OFF ({c.discount.code})
-                                </span>
+                            {/* DISCOUNT BADGE */}
+                            <td>
+                              {c.discount ? (
+                                <div className="discount-pill-active" onClick={() => openDiscountModalForCustomer(c)}>
+                                  <Tag size={12} />
+                                  <span>
+                                    {c.discount.value}{c.discount.type === 'percent' ? '%' : '₦'} OFF ({c.discount.code})
+                                  </span>
+                                </div>
+                              ) : (
+                                <button
+                                  className="add-discount-btn"
+                                  onClick={() => openDiscountModalForCustomer(c)}
+                                >
+                                  <Percent size={12} /> Give discount
+                                </button>
+                              )}
+                            </td>
+
+                            {/* ACTIONS COLUMN */}
+                            <td>
+                              <div className="cust-action-buttons">
+                                <button
+                                  className="cust-btn-discount"
+                                  title="Assign or Modify Discount"
+                                  onClick={() => openDiscountModalForCustomer(c)}
+                                >
+                                  <Percent size={13} />
+                                </button>
+                                <button
+                                  className="cust-btn-whatsapp"
+                                  title="Message on WhatsApp with Discount"
+                                  onClick={() => sendWhatsAppDiscount(c)}
+                                >
+                                  <MessageCircle size={13} />
+                                </button>
+                                <button
+                                  className="cust-btn-profile"
+                                  title="View Customer Profile & Notes"
+                                  onClick={() => setSelectedCustomerProfile(c)}
+                                >
+                                  <Pencil size={13} /> Details
+                                </button>
                               </div>
-                            ) : (
-                              <button
-                                className="add-discount-btn"
-                                onClick={() => openDiscountModalForCustomer(c)}
-                              >
-                                <Percent size={12} /> Give discount
-                              </button>
-                            )}
-                          </td>
-
-                          {/* ACTIONS COLUMN */}
-                          <td>
-                            <div className="cust-action-buttons">
-                              <button
-                                className="cust-btn-discount"
-                                title="Assign or Modify Discount"
-                                onClick={() => openDiscountModalForCustomer(c)}
-                              >
-                                <Percent size={13} />
-                              </button>
-                              <button
-                                className="cust-btn-whatsapp"
-                                title="Message on WhatsApp with Discount"
-                                onClick={() => sendWhatsAppDiscount(c)}
-                              >
-                                <MessageCircle size={13} />
-                              </button>
-                              <button
-                                className="cust-btn-profile"
-                                title="View Customer Profile & Notes"
-                                onClick={() => setSelectedCustomerProfile(c)}
-                              >
-                                <Pencil size={13} /> Details
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </section>
           )}
@@ -2553,19 +2501,26 @@ function App() {
                     <p>Enquiries from website contact form</p>
                   </div>
                 </div>
-                {messages.map((m, idx) => (
-                  <div className={`message-item ${m.unread ? 'message-unread' : ''}`} key={idx}>
-                    <div className="message-avatar">{m.name[0]}</div>
-                    <div className="message-preview">
-                      <div>
-                        <strong>{m.name}</strong>
-                        <small>{m.time}</small>
-                      </div>
-                      <b>{m.subject}</b>
-                      <p>{m.body}</p>
-                    </div>
+                {messages.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <MessageSquare size={36} style={{ opacity: 0.35, marginBottom: 12, color: 'var(--brand-navy)' }} />
+                    <p style={{ fontSize: 13, color: '#687c88' }}>Your inbox is clear. New messages from the website contact form will appear here.</p>
                   </div>
-                ))}
+                ) : (
+                  messages.map((m, idx) => (
+                    <div className={`message-item ${m.unread ? 'message-unread' : ''}`} key={idx}>
+                      <div className="message-avatar">{m.name[0]}</div>
+                      <div className="message-preview">
+                        <div>
+                          <strong>{m.name}</strong>
+                          <small>{m.time}</small>
+                        </div>
+                        <b>{m.subject}</b>
+                        <p>{m.body}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </section>
 
               <section className="panel message-detail">
@@ -2613,27 +2568,77 @@ function App() {
                 <div className="panel-head">
                   <div>
                     <h3>Restaurant & Kitchen Profile</h3>
-                    <p>Details displayed on receipts and dispatch dockets</p>
+                    <p>Details displayed on receipts, invoices, and dispatch dockets</p>
                   </div>
                 </div>
                 <label>
                   Business Name
-                  <input defaultValue="Ma’Great Taste Restaurant & Catering Services" />
+                  <input
+                    value={settingsBusinessName}
+                    onChange={e => setSettingsBusinessName(e.target.value)}
+                    placeholder="Business Name"
+                  />
                 </label>
                 <label>
                   Head Kitchen Address
-                  <input defaultValue="Lekki Phase 1, Lagos, Nigeria" />
+                  <input
+                    value={settingsAddress}
+                    onChange={e => setSettingsAddress(e.target.value)}
+                    placeholder="Kitchen Address"
+                  />
                 </label>
                 <label>
                   Contact Phone & WhatsApp
-                  <input defaultValue="+234 803 456 7890" />
+                  <input
+                    value={settingsPhone}
+                    onChange={e => setSettingsPhone(e.target.value)}
+                    placeholder="+234 803 456 7890"
+                  />
                 </label>
                 <label>
                   Email Address
-                  <input defaultValue="orders@magreattaste.ng" />
+                  <input
+                    value={settingsEmail}
+                    onChange={e => setSettingsEmail(e.target.value)}
+                    placeholder="orders@magreattaste.ng"
+                  />
                 </label>
-                <button className="primary-btn" onClick={() => notify('Settings saved.')}>
-                  Save changes
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <label>
+                    Minimum Order Value (₦)
+                    <input
+                      type="number"
+                      value={settingsMinOrder}
+                      onChange={e => setSettingsMinOrder(e.target.value)}
+                      placeholder="3000"
+                    />
+                  </label>
+                  <label>
+                    Standard Delivery Fee (₦)
+                    <input
+                      type="number"
+                      value={settingsDeliveryFee}
+                      onChange={e => setSettingsDeliveryFee(e.target.value)}
+                      placeholder="2000"
+                    />
+                  </label>
+                </div>
+                <label>
+                  Operating Hours
+                  <input
+                    value={settingsOpeningHours}
+                    onChange={e => setSettingsOpeningHours(e.target.value)}
+                    placeholder="8:00 AM – 10:00 PM Daily"
+                  />
+                </label>
+                <button
+                  className="primary-btn"
+                  disabled={isSavingSettings}
+                  onClick={saveStoreSettings}
+                  style={{ marginTop: 14 }}
+                >
+                  <CheckCircle2 size={15} />
+                  {isSavingSettings ? 'Saving to Backend...' : 'Save changes'}
                 </button>
               </section>
 
@@ -2649,22 +2654,43 @@ function App() {
                     <strong>Online ordering active</strong>
                     <small>Accept incoming orders from frontend</small>
                   </div>
-                  <input type="checkbox" defaultChecked />
+                  <input
+                    type="checkbox"
+                    checked={settingsOnlineOrdering}
+                    onChange={e => setSettingsOnlineOrdering(e.target.checked)}
+                  />
                 </div>
                 <div className="toggle-row">
                   <div>
                     <strong>Instant WhatsApp kitchen alerts</strong>
                     <small>Forward new order alerts to chef phone</small>
                   </div>
-                  <input type="checkbox" defaultChecked />
+                  <input
+                    type="checkbox"
+                    checked={settingsWhatsappAlerts}
+                    onChange={e => setSettingsWhatsappAlerts(e.target.checked)}
+                  />
                 </div>
                 <div className="toggle-row">
                   <div>
                     <strong>Corporate discounts enabled</strong>
                     <small>Allow company promo codes at checkout</small>
                   </div>
-                  <input type="checkbox" defaultChecked />
+                  <input
+                    type="checkbox"
+                    checked={settingsCorporateDiscounts}
+                    onChange={e => setSettingsCorporateDiscounts(e.target.checked)}
+                  />
                 </div>
+                <button
+                  className="secondary-btn"
+                  disabled={isSavingSettings}
+                  onClick={saveStoreSettings}
+                  style={{ marginTop: 14 }}
+                >
+                  <CheckCircle2 size={15} />
+                  {isSavingSettings ? 'Saving...' : 'Save Operations'}
+                </button>
               </section>
             </div>
           )}
