@@ -2241,6 +2241,144 @@ tbody tr:hover {
   font-size: 12px;
 }
 
+/* Food 3-Dots Dropdown Menu */
+.food-menu-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
+
+.food-dropdown-menu {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  width: 195px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  z-index: 20;
+  animation: dropdown-pop 0.15s ease-out;
+}
+
+@keyframes dropdown-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.food-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-navy);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+}
+
+.food-dropdown-menu .dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.food-dropdown-menu .dropdown-item.danger {
+  color: #dc2626;
+}
+
+.food-dropdown-menu .dropdown-item.danger:hover {
+  background: #fef2f2;
+}
+
+.food-dropdown-menu .status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.food-dropdown-menu .status-indicator.sold {
+  background: #ef4444;
+}
+
+.food-dropdown-menu .status-indicator.avail {
+  background: #10b981;
+}
+
+/* Dispatch Time Selector & Guide */
+.dispatch-time-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-navy);
+}
+
+.dispatch-time-select {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand-navy);
+  cursor: pointer;
+}
+
+.reminders-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.reminders-guide-step {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.reminders-guide-step .step-number {
+  display: inline-block;
+  background: var(--brand-gold);
+  color: var(--brand-navy);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.reminders-guide-step h4 {
+  font-size: 12px;
+  margin: 0 0 4px;
+  color: var(--brand-navy);
+  font-weight: 700;
+}
+
+.reminders-guide-step p {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
 /* =====================================================================
    RESPONSIVE QUERIES
    ===================================================================== */

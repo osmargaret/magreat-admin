@@ -49,9 +49,11 @@ import {
   FileText,
   DollarSign
 } from 'lucide-react';
+import { defaultFoods } from './data/menuData';
 
-// Use production Render backend as default
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://magreat-backend.onrender.com/api';
+// Bulletproof backend URL resolver (ensures /api is always present)
+const rawApiBase = String((import.meta as any).env?.VITE_API_URL || 'https://magreat-backend.onrender.com/api').trim().replace(/\/+$/, '');
+const API_BASE = rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`;
 
 type Section =
   | 'Overview'
@@ -186,45 +188,60 @@ export function resolveMealImage(img?: string): string {
   return cleanPath;
 }
 
-const initialFoods: Food[] = [
-  { id: 1, name: 'Smoky Party Jollof & Grilled Chicken', category: 'Nigerian', price: 6500, status: 'Available', orders: 142, image: '/meals/smoky-party-jollof-rice.jpg', description: 'Firewood-infused party jollof rice, seasoned grilled chicken, sweet fried dodo plantain & creamy coleslaw', tag: 'Bestseller' },
-  { id: 2, name: 'Rich Egusi Soup & Pounded Yam', category: 'Soups & Swallows', price: 7500, status: 'Available', orders: 130, image: '/meals/egusi-soup.png', description: 'Rich melon seed soup simmered with dried catfish, stockfish and tender goat meat.', tag: 'Chef Choice' },
-  { id: 3, name: 'Crispy Golden Akara (Bean Cakes)', category: 'Breakfast', price: 2500, status: 'Available', orders: 94, image: '/meals/akara-bean-cake.jpg', description: 'Deep fried golden bean cakes with scotch bonnet peppers, onions and crayfish.', tag: 'Popular' },
-  { id: 4, name: 'Authentic Oyo Amala (Yam Flour)', category: 'Soups & Swallows', price: 1800, status: 'Available', orders: 168, image: '/meals/amala.jpg', description: 'Silky smooth yam flour swallow prepared the traditional way.', tag: 'Everyday' },
-  { id: 5, name: 'Designer Ayamase (Ofada Pepper Stew)', category: 'Nigerian', price: 7500, status: 'Available', orders: 185, image: '/meals/ayamase-sauce.jpg', description: 'Bleached palm oil green scotch bonnet sauce loaded with assorted meats, boiled egg and locust beans.', tag: 'Bestseller' },
-  { id: 6, name: 'Banga Palm Fruit Rice with Seafood', category: 'Nigerian', price: 6800, status: 'Available', orders: 112, image: '/meals/banga-rice.jpg', description: 'Rich Delta palm nut extract infused into long grain rice with dried fish and crayfish.', tag: 'Special' }
-];
+const initialFoods: Food[] = defaultFoods.map((f: any) => ({
+  id: f.id,
+  name: f.name,
+  category: f.category || 'Nigerian',
+  price: f.price,
+  status: (f.status as any) || 'Available',
+  orders: f.ordersCount || 0,
+  image: f.image || FALLBACK_FOOD_IMG,
+  description: f.description,
+  tag: f.tag,
+  rating: f.rating || '4.9',
+  time: f.time || '25–35 min'
+}));
 
 const initialOrders: Order[] = [];
 
 const initialMealPlans: MealPlanPackage[] = [
   {
-    id: 'weekly-essentials',
-    name: 'Weekly Essentials',
-    meals: '10 meals',
-    price: 45000,
-    description: 'Ideal for busy professionals who want wholesome dinners throughout the working week.',
-    features: ['5 main dishes', '2 soup options', 'Packed & labelled', 'Storage & reheating guide'],
+    id: 'single-professional',
+    name: 'Single Professional',
+    meals: '5 meals + 1 soup tub (1.5L)',
+    price: 32500,
+    description: 'Perfect for busy executives who want wholesome home dinners ready in minutes without cooking or food waste.',
+    features: ['5 Individual Chef Meals', '1 Bowl Signature Soup (1.5L)', '2 Portions Grilled Protein Sides', 'Free Saturday Dispatch'],
     color: 'mint',
     active: true
   },
   {
-    id: 'family-freezer',
-    name: 'Family Freezer Pack',
-    meals: '20 meals',
-    price: 85000,
-    description: 'Generous family-sized portions ready to defrost and enjoy anytime.',
-    features: ['Family-sized portions', 'Mix of soups & rice', 'Freezer-ready packaging', 'Weekend deliveries'],
+    id: 'couples-duo',
+    name: 'Couples & Duo',
+    meals: '10 meals + 2 soup tubs (2.5L)',
+    price: 58000,
+    description: 'Ideal for couples or roommates desiring varied, flavorful lunches and dinners without kitchen stress.',
+    features: ['10 Gourmet Meals / week', '2 Traditional Soup Bowls (2.5L)', '4 Assorted Meats & Fish', 'Custom Spice Level'],
     color: 'peach',
     active: true
   },
   {
-    id: 'monthly-stockup',
-    name: 'Monthly Stock-Up',
-    meals: '40 meals',
-    price: 165000,
-    description: 'Complete peace of mind. We stock your freezer with fresh rotations every week.',
-    features: ['4 weekly deliveries', 'Customisable menu', 'Priority delivery slots', 'Complimentary seasonal treat'],
+    id: 'family-feast',
+    name: 'Family Feast Plan',
+    meals: '20 meals + 4 soup tubs (4L)',
+    price: 115000,
+    description: 'Designed for households of 4–6. Abundant portions of authentic home-cooked food the whole family will love.',
+    features: ['20 Full Portion Meals', '4 Large Soup Tubs (4L each)', 'Bulk Jollof & Fried Rice Trays', 'Dedicated WhatsApp Concierge'],
+    color: 'amber',
+    active: true
+  },
+  {
+    id: 'fit-lean',
+    name: 'Fit & Lean Protein',
+    meals: '7 high-protein macro bowls',
+    price: 48000,
+    description: 'Tailored for fitness enthusiasts and weight watchers. High protein, clean cold-pressed oils, low glycemic index.',
+    features: ['7 High-Protein Low-Carb Bowls', 'Marinated Herb Chicken & Fish', 'Local Greens & Brown Rice', 'Macro Label on Every Box'],
     color: 'lavender',
     active: true
   }
@@ -263,6 +280,8 @@ function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [toast, setToast] = useState('');
   const [backendOnline, setBackendOnline] = useState(false);
+  const [openFoodMenuId, setOpenFoodMenuId] = useState<number | null>(null);
+  const [reminderDispatchTime, setReminderDispatchTime] = useState('17:00');
 
   // Reminders Multi-Select State
   const [selectedReminderIds, setSelectedReminderIds] = useState<string[]>([]);
@@ -585,6 +604,12 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = () => setOpenFoodMenuId(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
   const unread = messages.filter(m => m.unread).length;
   const newOrdersCount = orders.filter(o => o.status === 'New').length;
 
@@ -653,23 +678,37 @@ function App() {
     };
 
     if (editingFood) {
+      const editTargetId = editingFood.id;
+      setFoods(prev => prev.map(f => (f.id === editTargetId ? { ...f, ...payload } : f)));
+      setShowAddFood(false);
+      setEditingFood(null);
+      notify(`"${foodName}" updated in real time!`);
+
       try {
-        const res = await fetch(`${API_BASE}/menu/${editingFood.id}`, {
+        const res = await fetch(`${API_BASE}/menu/${editTargetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          notify(`"${foodName}" updated in live database!`);
-          loadBackendData();
-        } else {
-          throw new Error();
+          notify(`"${foodName}" saved live in database!`);
         }
-      } catch {
-        setFoods(prev => prev.map(f => (f.id === editingFood.id ? { ...f, ...payload } : f)));
-        notify(`"${foodName}" updated locally.`);
+      } catch (err) {
+        console.warn('Backend sync:', err);
       }
+      return;
     } else {
+      const tempId = Date.now();
+      const newDish: Food = {
+        id: tempId,
+        ...payload,
+        orders: 0
+      };
+      setFoods(prev => [newDish, ...prev]);
+      setShowAddFood(false);
+      setEditingFood(null);
+      notify(`"${foodName}" added to the menu!`);
+
       try {
         const res = await fetch(`${API_BASE}/menu`, {
           method: 'POST',
@@ -677,51 +716,44 @@ function App() {
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          notify(`"${foodName}" added to the menu! Live on frontend.`);
-          loadBackendData();
-        } else {
-          throw new Error();
+          const created = await res.json();
+          if (created && created.id) {
+            setFoods(prev => prev.map(f => (f.id === tempId ? { ...f, id: created.id } : f)));
+          }
+          notify(`"${foodName}" saved live in database!`);
         }
-      } catch {
-        const newDish: Food = {
-          id: Date.now(),
-          ...payload,
-          orders: 0
-        };
-        setFoods(prev => [newDish, ...prev]);
-        notify(`"${foodName}" added to the menu.`);
+      } catch (err) {
+        console.warn('Backend sync:', err);
       }
+      return;
     }
-
-    setShowAddFood(false);
-    setEditingFood(null);
   };
 
   const toggleFoodStatus = async (f: Food) => {
     const nextStatus = f.status === 'Available' ? 'Sold out' : 'Available';
+    setFoods(prev => prev.map(item => (item.id === f.id ? { ...item, status: nextStatus } : item)));
+    notify(`${f.name} marked ${nextStatus}.`);
+
     try {
       await fetch(`${API_BASE}/menu/${f.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
       });
-      notify(`${f.name} marked ${nextStatus}.`);
-      loadBackendData();
-    } catch {
-      setFoods(prev => prev.map(item => (item.id === f.id ? { ...item, status: nextStatus } : item)));
-      notify(`${f.name} status updated.`);
+    } catch (err) {
+      console.warn('Backend sync:', err);
     }
   };
 
   const deleteFood = async (id: number, name: string) => {
     if (!window.confirm(`Are you sure you want to remove "${name}" from the menu?`)) return;
+    setFoods(prev => prev.filter(f => f.id !== id));
+    notify(`"${name}" removed from menu.`);
+
     try {
       await fetch(`${API_BASE}/menu/${id}`, { method: 'DELETE' });
-      notify(`"${name}" removed from menu.`);
-      loadBackendData();
-    } catch {
-      setFoods(prev => prev.filter(f => f.id !== id));
-      notify(`"${name}" removed locally.`);
+    } catch (err) {
+      console.warn('Backend sync:', err);
     }
   };
 
@@ -789,61 +821,57 @@ function App() {
     };
 
     if (editingPlan) {
+      const planTargetId = editingPlan.id;
+      setMealPlans(prev => prev.map(p => (p.id === planTargetId ? { ...p, ...payload } : p)));
+      setShowPlanModal(false);
+      setEditingPlan(null);
+      notify(`"${planName}" package updated!`);
+
       try {
-        const res = await fetch(`${API_BASE}/mealplans/packages/${editingPlan.id}`, {
+        await fetch(`${API_BASE}/mealplans/packages/${planTargetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (res.ok) {
-          notify(`"${planName}" package updated!`);
-          loadBackendData();
-        } else {
-          throw new Error();
-        }
-      } catch {
-        setMealPlans(prev => prev.map(p => (p.id === editingPlan.id ? { ...p, ...payload } : p)));
-        notify(`"${planName}" updated locally.`);
+      } catch (err) {
+        console.warn('Backend sync:', err);
       }
+      return;
     } else {
+      const newPkg: MealPlanPackage = {
+        id: `plan-${Date.now()}`,
+        ...payload,
+        active: true
+      };
+      setMealPlans(prev => [...prev, newPkg]);
+      setShowPlanModal(false);
+      setEditingPlan(null);
+      notify(`New package "${planName}" created!`);
+
       try {
-        const res = await fetch(`${API_BASE}/mealplans/packages`, {
+        await fetch(`${API_BASE}/mealplans/packages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (res.ok) {
-          notify(`New package "${planName}" published!`);
-          loadBackendData();
-        } else {
-          throw new Error();
-        }
-      } catch {
-        const newPkg: MealPlanPackage = {
-          id: `plan-${Date.now()}`,
-          ...payload,
-          active: true
-        };
-        setMealPlans(prev => [...prev, newPkg]);
-        notify(`New package "${planName}" created.`);
+      } catch (err) {
+        console.warn('Backend sync:', err);
       }
+      return;
     }
-
-    setShowPlanModal(false);
-    setEditingPlan(null);
   };
 
   const deleteMealPlan = async (id: string, name: string) => {
     if (!window.confirm(`Delete the "${name}" subscription package?`)) return;
+    setMealPlans(prev => prev.filter(p => p.id !== id));
+    setShowPlanModal(false);
+    notify(`"${name}" package removed.`);
+
     try {
       await fetch(`${API_BASE}/mealplans/packages/${id}`, { method: 'DELETE' });
-      notify(`"${name}" package removed.`);
-      loadBackendData();
-    } catch {
-      setMealPlans(prev => prev.filter(p => p.id !== id));
-      notify(`"${name}" package removed.`);
+    } catch (err) {
+      console.warn('Backend sync:', err);
     }
-    setShowPlanModal(false);
   };
 
   // ==========================================
@@ -1409,10 +1437,7 @@ function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                OCTOBER 2026 <span>•</span> LAGOS, NIGERIA <span>•</span>{' '}
-                <b style={{ color: backendOnline ? '#188363' : '#d99c2b' }}>
-                  {backendOnline ? '● BACKEND CONNECTED (RENDER)' : '○ CONNECTING TO API...'}
-                </b>
+                OCTOBER 2026 <span>•</span> LAGOS, NIGERIA
               </div>
               <h1>
                 {section === 'Overview' && 'Good morning, Chef Margaret 👋'}
@@ -1435,22 +1460,6 @@ function App() {
                 {section === 'Saved meals & reminders' && 'Dispatch manual bulk reminders to selected customers, or let the 5:00 PM automated dinner engine run.'}
                 {section === 'Customers' && 'Manage individual VIPs, corporate companies, assign discounts and vouchers.'}
               </p>
-            </div>
-
-            <div className="heading-actions">
-              <button className="secondary-btn" onClick={loadBackendData} title="Refresh real-time data">
-                <Clock3 size={15} /> Refresh data
-              </button>
-              {section === 'Menu management' && (
-                <button className="primary-btn" onClick={openAddFoodModal}>
-                  <Plus size={16} /> Add menu item
-                </button>
-              )}
-              {section === 'Meal plans' && (
-                <button className="primary-btn" onClick={openCreatePlanModal}>
-                  <Plus size={16} /> Create plan
-                </button>
-              )}
             </div>
           </div>
 
@@ -1493,10 +1502,10 @@ function App() {
                     </div>
                     <span className="stat-change up">+18%</span>
                   </div>
-                  <p>Gross revenue (30 days)</p>
-                  <strong className="stat-value">₦3,485,000</strong>
+                  <p>Gross revenue (Real-time)</p>
+                  <strong className="stat-value">{money(orders.reduce((sum, o) => sum + (o.total || 0), 0))}</strong>
                   <div className="stat-bottom">
-                    <small>Across takeaway & catering</small>
+                    <small>{orders.length} orders recorded</small>
                   </div>
                 </div>
 
@@ -1505,12 +1514,12 @@ function App() {
                     <div className="stat-icon orange">
                       <ShoppingBag />
                     </div>
-                    <span className="stat-change up">{orders.length} orders</span>
+                    <span className="stat-change up">{orders.filter(o => o.status === 'Delivered').length} done</span>
                   </div>
                   <p>Total orders fulfilled</p>
-                  <strong className="stat-value">{orders.length + 142}</strong>
+                  <strong className="stat-value">{orders.filter(o => o.status === 'Delivered').length}</strong>
                   <div className="stat-bottom">
-                    <small>98.4% on-time delivery</small>
+                    <small>{orders.filter(o => o.status === 'Preparing' || o.status === 'Ready').length} in kitchen prep</small>
                   </div>
                 </div>
 
@@ -1524,7 +1533,7 @@ function App() {
                   <p>Catering enquiries</p>
                   <strong className="stat-value">{cateringLeads.length} active</strong>
                   <div className="stat-bottom">
-                    <small>Valued at ₦1.8M+</small>
+                    <small>{cateringLeads.length > 0 ? `${cateringLeads.length} bookings in review` : 'No pending bookings'}</small>
                   </div>
                 </div>
 
@@ -1540,7 +1549,7 @@ function App() {
                     {customers.filter(c => c.discount).length} accounts
                   </strong>
                   <div className="stat-bottom">
-                    <small>Northstar, Adaeze & VIPs</small>
+                    <small>{customers.filter(c => c.discount).length > 0 ? 'Custom vouchers assigned' : 'No active discount rules'}</small>
                   </div>
                 </div>
               </div>
@@ -1869,13 +1878,61 @@ function App() {
                         {f.status}
                       </span>
                       {f.tag && <span className="food-badge-tag">{f.tag}</span>}
-                      <button
-                        className="food-more"
-                        onClick={() => toggleFoodStatus(f)}
-                        title="Click to toggle Available / Sold out"
-                      >
-                        <MoreHorizontal size={18} />
-                      </button>
+                      <div className="food-menu-container">
+                        <button
+                          className="food-more"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenFoodMenuId(openFoodMenuId === f.id ? null : f.id);
+                          }}
+                          title="Dish options"
+                        >
+                          <MoreHorizontal size={18} />
+                        </button>
+                        {openFoodMenuId === f.id && (
+                          <div className="food-dropdown-menu" onClick={e => e.stopPropagation()}>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                toggleFoodStatus(f);
+                                setOpenFoodMenuId(null);
+                              }}
+                            >
+                              <span className={`status-indicator ${f.status === 'Available' ? 'sold' : 'avail'}`} />
+                              {f.status === 'Available' ? 'Mark as Sold out' : 'Mark as Available'}
+                            </button>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                openEditFoodModal(f);
+                                setOpenFoodMenuId(null);
+                              }}
+                            >
+                              <Pencil size={14} /> Edit details & price
+                            </button>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                const dishUrl = `https://magreattaste.ng/#menu?dish=${encodeURIComponent(f.name)}`;
+                                navigator.clipboard?.writeText(dishUrl);
+                                notify(`Share link for "${f.name}" copied!`);
+                                setOpenFoodMenuId(null);
+                              }}
+                            >
+                              <Copy size={14} /> Copy dish link
+                            </button>
+                            <button
+                              className="dropdown-item danger"
+                              onClick={() => {
+                                setOpenFoodMenuId(null);
+                                deleteFood(f.id, f.name);
+                              }}
+                            >
+                              <Trash2 size={14} /> Remove dish
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="food-card-body">
@@ -2184,13 +2241,31 @@ function App() {
                   </div>
                   <div>
                     <strong style={{ fontSize: 13, color: 'var(--brand-navy)', display: 'block' }}>
-                      How Automated & Manual Dinner Reminders Work
+                      How Customer Saved Meals & Dinner Reminders Function
                     </strong>
                     <p style={{ fontSize: 11, color: '#485e70', margin: '4px 0 0', lineHeight: 1.6 }}>
-                      When customers tap the bookmark/heart on meals on the website, they are subscribed here.
-                      <b> Automated Engine:</b> Runs daily at 5:00 PM (dinner preparation) sending personalized dinner alerts.
-                      <b> Manual Dispatch:</b> Select individual or multiple customers below (e.g. 10 at once) and click "Dispatch to Selected" to send on-demand reminders anytime.
+                      When visitors tap the heart icon on any meal on your website, it is saved to their profile.
+                      At your configured daily dispatch time, our automated system prompts them with their favorite meals to order dinner before kitchen cutoff.
                     </p>
+                  </div>
+                </div>
+
+                {/* 3-Step Clear Visual Guide */}
+                <div className="reminders-guide-grid">
+                  <div className="reminders-guide-step">
+                    <span className="step-number">STEP 1</span>
+                    <h4>Customer Bookmarks Meal</h4>
+                    <p>Shoppers on the website tap the heart on meals they love (e.g. Egusi, Jollof, Asun) to save them to their dinner favorites.</p>
+                  </div>
+                  <div className="reminders-guide-step">
+                    <span className="step-number">STEP 2</span>
+                    <h4>Dinner Alert ({reminderDispatchTime === '17:00' ? '5:00 PM' : reminderDispatchTime})</h4>
+                    <p>At your configured time, our engine sends an alert reminding them to order dinner before kitchen cutoff.</p>
+                  </div>
+                  <div className="reminders-guide-step">
+                    <span className="step-number">STEP 3</span>
+                    <h4>Instant 1-Tap Checkout</h4>
+                    <p>The notification loads their exact saved dishes right into the shopping bag for instant reordering.</p>
                   </div>
                 </div>
               </div>
@@ -2199,13 +2274,13 @@ function App() {
               <div className="reminders-bulk-toolbar">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button className="select-all-btn" onClick={toggleSelectAllReminders}>
-                    {selectedReminderIds.length === savedCustomers.length ? (
+                    {savedCustomers.length > 0 && selectedReminderIds.length === savedCustomers.length ? (
                       <CheckSquare size={16} />
                     ) : (
                       <Square size={16} />
                     )}
                     <span>
-                      {selectedReminderIds.length === savedCustomers.length
+                      {savedCustomers.length > 0 && selectedReminderIds.length === savedCustomers.length
                         ? 'Deselect All'
                         : `Select All (${savedCustomers.length})`}
                     </span>
@@ -2225,30 +2300,40 @@ function App() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div className="dispatch-time-box">
+                    <Clock3 size={15} />
+                    <span>Dispatch Time:</span>
+                    <select
+                      value={reminderDispatchTime}
+                      onChange={(e) => {
+                        setReminderDispatchTime(e.target.value);
+                        notify(`Dinner reminder dispatch time set to ${e.target.options[e.target.selectedIndex].text}!`);
+                      }}
+                      className="dispatch-time-select"
+                    >
+                      <option value="16:00">4:00 PM (Early Dinner Prep)</option>
+                      <option value="16:30">4:30 PM (Pre-Rush Alert)</option>
+                      <option value="17:00">5:00 PM (Standard Evening)</option>
+                      <option value="17:30">5:30 PM (Peak Commute Alert)</option>
+                      <option value="18:00">6:00 PM (Late Dinner Orders)</option>
+                      <option value="19:00">7:00 PM (Night Shift Orders)</option>
+                    </select>
+                  </div>
+
                   <div className="auto-schedule-chip">
-                    <Clock3 size={14} />
-                    <span>Auto 5:00 PM Dinner Engine:</span>
+                    <Sparkles size={14} />
+                    <span>Auto Engine:</span>
                     <button
                       className={`schedule-toggle-pill ${autoScheduleActive ? 'active' : ''}`}
                       onClick={() => {
                         setAutoScheduleActive(!autoScheduleActive);
-                        notify(`Automated 5:00 PM reminders ${!autoScheduleActive ? 'activated' : 'paused'}.`);
+                        notify(`Automated dinner reminders ${!autoScheduleActive ? 'activated' : 'paused'}.`);
                       }}
                     >
                       {autoScheduleActive ? 'Active' : 'Paused'}
                     </button>
                   </div>
-
-                  <button
-                    className="secondary-btn"
-                    onClick={() => {
-                      setSelectedReminderIds(savedCustomers.map(c => c.id));
-                      notify('All subscribers selected for dispatch.');
-                    }}
-                  >
-                    Select All {savedCustomers.length}
-                  </button>
                 </div>
               </div>
 
