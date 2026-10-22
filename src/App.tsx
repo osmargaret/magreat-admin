@@ -54,6 +54,17 @@ import { defaultFoods } from './data/menuData';
 // Bulletproof backend URL resolver (ensures /api is always present)
 const rawApiBase = String((import.meta as any).env?.VITE_API_URL || 'https://magreat-backend.onrender.com/api').trim().replace(/\/+$/, '');
 const API_BASE = rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`;
+const ADMIN_SECRET = String((import.meta as any).env?.VITE_ADMIN_SECRET || '');
+
+/** Authenticated fetch — automatically attaches the admin Bearer token */
+function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+  if (ADMIN_SECRET) headers['Authorization'] = `Bearer ${ADMIN_SECRET}`;
+  return fetch(url, { ...options, headers });
+}
 
 type Section =
   | 'Overview'
@@ -429,7 +440,7 @@ function App() {
 
   // Immediate Health Check with automatic retry
   const pingHealth = () => {
-    fetch(`${API_BASE}/health`)
+    adminFetch(`${API_BASE}/health`)
       .then(r => r.json())
       .then(d => {
         if (d && (d.status === 'ok' || d.service)) {
@@ -448,7 +459,7 @@ function App() {
     reader.onload = async () => {
       const base64 = reader.result as string;
       try {
-        const res = await fetch(`${API_BASE}/upload`, {
+        const res = await adminFetch(`${API_BASE}/upload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -478,7 +489,7 @@ function App() {
     pingHealth();
 
     // Menu
-    fetch(`${API_BASE}/menu`)
+    adminFetch(`${API_BASE}/menu`)
       .then(r => r.json())
       .then(foodData => {
         if (Array.isArray(foodData) && foodData.length > 0) {
@@ -503,7 +514,7 @@ function App() {
       .catch(() => {});
 
     // Orders
-    fetch(`${API_BASE}/orders`)
+    adminFetch(`${API_BASE}/orders`)
       .then(r => r.json())
       .then(orderData => {
         if (Array.isArray(orderData)) {
@@ -532,7 +543,7 @@ function App() {
       .catch(() => {});
 
     // Catering Leads
-    fetch(`${API_BASE}/catering`)
+    adminFetch(`${API_BASE}/catering`)
       .then(r => r.json())
       .then(catData => {
         if (Array.isArray(catData)) {
@@ -543,7 +554,7 @@ function App() {
       .catch(() => {});
 
     // Meal Plan Packages
-    fetch(`${API_BASE}/mealplans/packages`)
+    adminFetch(`${API_BASE}/mealplans/packages`)
       .then(r => r.json())
       .then(pkgData => {
         if (Array.isArray(pkgData)) {
@@ -554,7 +565,7 @@ function App() {
       .catch(() => {});
 
     // Saved Meals & Reminders
-    fetch(`${API_BASE}/saved-meals`)
+    adminFetch(`${API_BASE}/saved-meals`)
       .then(r => r.json())
       .then(savedData => {
         if (Array.isArray(savedData)) {
@@ -565,7 +576,7 @@ function App() {
       .catch(() => {});
 
     // Customer Discounts
-    fetch(`${API_BASE}/discounts`)
+    adminFetch(`${API_BASE}/discounts`)
       .then(r => r.json())
       .then(discData => {
         if (Array.isArray(discData)) {
@@ -581,7 +592,7 @@ function App() {
       .catch(() => {});
 
     // Real-time Customers Directory
-    fetch(`${API_BASE}/customers`)
+    adminFetch(`${API_BASE}/customers`)
       .then(r => r.json())
       .then(custData => {
         if (Array.isArray(custData)) {
@@ -592,7 +603,7 @@ function App() {
       .catch(() => {});
 
     // Real-time Customer Messages
-    fetch(`${API_BASE}/messages`)
+    adminFetch(`${API_BASE}/messages`)
       .then(r => r.json())
       .then(msgData => {
         if (Array.isArray(msgData)) {
@@ -603,7 +614,7 @@ function App() {
       .catch(() => {});
 
     // Real-time Store Settings
-    fetch(`${API_BASE}/settings`)
+    adminFetch(`${API_BASE}/settings`)
       .then(r => r.json())
       .then(s => {
         if (s && s.businessName) {
@@ -640,7 +651,7 @@ function App() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/settings`, {
+      const res = await adminFetch(`${API_BASE}/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -776,7 +787,7 @@ function App() {
       notify(`"${foodName}" updated in real time!`);
 
       try {
-        const res = await fetch(`${API_BASE}/menu/${editTargetId}`, {
+        const res = await adminFetch(`${API_BASE}/menu/${editTargetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -801,7 +812,7 @@ function App() {
       notify(`"${foodName}" added to the menu!`);
 
       try {
-        const res = await fetch(`${API_BASE}/menu`, {
+        const res = await adminFetch(`${API_BASE}/menu`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -826,7 +837,7 @@ function App() {
     notify(`${f.name} marked ${nextStatus}.`);
 
     try {
-      await fetch(`${API_BASE}/menu/${f.id}`, {
+      await adminFetch(`${API_BASE}/menu/${f.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
@@ -842,7 +853,7 @@ function App() {
     notify(`"${name}" removed from menu.`);
 
     try {
-      await fetch(`${API_BASE}/menu/${id}`, { method: 'DELETE' });
+      await adminFetch(`${API_BASE}/menu/${id}`, { method: 'DELETE' });
     } catch (err) {
       console.warn('Backend sync:', err);
     }
@@ -853,7 +864,7 @@ function App() {
   // ==========================================
   const updateOrderStatus = async (id: string, status: Order['status']) => {
     try {
-      await fetch(`${API_BASE}/orders/${id}/status`, {
+      await adminFetch(`${API_BASE}/orders/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -919,7 +930,7 @@ function App() {
       notify(`"${planName}" package updated!`);
 
       try {
-        await fetch(`${API_BASE}/mealplans/packages/${planTargetId}`, {
+        await adminFetch(`${API_BASE}/mealplans/packages/${planTargetId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -940,7 +951,7 @@ function App() {
       notify(`New package "${planName}" created!`);
 
       try {
-        await fetch(`${API_BASE}/mealplans/packages`, {
+        await adminFetch(`${API_BASE}/mealplans/packages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -959,7 +970,7 @@ function App() {
     notify(`"${name}" package removed.`);
 
     try {
-      await fetch(`${API_BASE}/mealplans/packages/${id}`, { method: 'DELETE' });
+      await adminFetch(`${API_BASE}/mealplans/packages/${id}`, { method: 'DELETE' });
     } catch (err) {
       console.warn('Backend sync:', err);
     }
@@ -1011,7 +1022,7 @@ function App() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/discounts`, {
+      const res = await adminFetch(`${API_BASE}/discounts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1048,7 +1059,7 @@ function App() {
   const removeCustomerDiscount = async (cust: CustomerRecord) => {
     if (!cust.discount) return;
     try {
-      await fetch(`${API_BASE}/discounts/${cust.discount.id}`, { method: 'DELETE' });
+      await adminFetch(`${API_BASE}/discounts/${cust.discount.id}`, { method: 'DELETE' });
       notify(`Discount removed for ${cust.name}.`);
     } catch {}
     setCustomers(prev =>
@@ -1099,7 +1110,7 @@ function App() {
     setNewCustCompany('');
 
     try {
-      const res = await fetch(`${API_BASE}/customers`, {
+      const res = await adminFetch(`${API_BASE}/customers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1141,7 +1152,7 @@ function App() {
     setReplyText(`Hello ${m.name},\nThank you for reaching out to Ma'Great Taste Restaurant & Catering!\nRegarding your enquiry: "${m.subject}":\n\n`);
     if (m.unread) {
       setMessages(prev => prev.map(item => (item.id === m.id ? { ...item, unread: false } : item)));
-      fetch(`${API_BASE}/messages/${m.id}/read`, { method: 'PATCH' }).catch(() => {});
+      adminFetch(`${API_BASE}/messages/${m.id}/read`, { method: 'PATCH' }).catch(() => {});
     }
   };
 
@@ -1206,7 +1217,7 @@ function App() {
   const dispatchSingleReminder = async (cust: SavedMealCustomer, occasion?: string) => {
     const activeOccasion = occasion || cust.mealType || getTimeCategory(reminderDispatchTime);
     try {
-      await fetch(`${API_BASE}/saved-meals/${cust.id}/remind`, {
+      await adminFetch(`${API_BASE}/saved-meals/${cust.id}/remind`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ occasion: activeOccasion })
@@ -1233,7 +1244,7 @@ function App() {
     const count = selectedReminderIds.length;
     const activeOccasion = selectedMealCategory !== 'All' ? selectedMealCategory : getTimeCategory(reminderDispatchTime);
     try {
-      const res = await fetch(`${API_BASE}/saved-meals/bulk-remind`, {
+      const res = await adminFetch(`${API_BASE}/saved-meals/bulk-remind`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: selectedReminderIds, occasion: activeOccasion })
@@ -1262,7 +1273,7 @@ function App() {
   const toggleReminderStatus = async (cust: SavedMealCustomer) => {
     const nextStatus = cust.reminderStatus === 'Active' ? 'Paused' : 'Active';
     try {
-      await fetch(`${API_BASE}/saved-meals/${cust.id}/status`, {
+      await adminFetch(`${API_BASE}/saved-meals/${cust.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
@@ -1289,7 +1300,7 @@ function App() {
   // ==========================================
   const updateCateringStatusDirect = async (id: string, status: CateringLead['status']) => {
     try {
-      await fetch(`${API_BASE}/catering/${id}/status`, {
+      await adminFetch(`${API_BASE}/catering/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -1308,7 +1319,7 @@ function App() {
   const sendCateringQuote = async () => {
     if (!quoteTargetLead || !quoteAmount) return;
     try {
-      await fetch(`${API_BASE}/catering/${quoteTargetLead.id}/quote`, {
+      await adminFetch(`${API_BASE}/catering/${quoteTargetLead.id}/quote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quoteAmount, menuNotes: quoteNotes })
