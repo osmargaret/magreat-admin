@@ -73,10 +73,29 @@ type Section =
   | 'Catering & events'
   | 'Meal plans'
   | 'Messages'
+  | 'Newsletter & broadcasts'
   | 'Saved meals & reminders'
   | 'Analytics'
   | 'Customers'
   | 'Settings';
+
+export type NewsletterSubscriber = {
+  id: string;
+  email: string;
+  subscribedAt: string;
+};
+
+export type NewsletterCampaign = {
+  id: string;
+  subject: string;
+  title: string;
+  content: string;
+  buttonText?: string;
+  buttonUrl?: string;
+  recipientCount: number;
+  status: 'Sent' | 'Failed' | 'Draft';
+  sentAt: string;
+};
 
 export type Food = {
   id: number;
@@ -331,6 +350,7 @@ const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Catering & events', icon: CalendarDays, group: 'WORKSPACE' },
   { label: 'Meal plans', icon: Snowflake, group: 'WORKSPACE' },
   { label: 'Messages', icon: MessageSquare, group: 'ENGAGE' },
+  { label: 'Newsletter & broadcasts', icon: Mail, group: 'ENGAGE' },
   { label: 'Saved meals & reminders', icon: Heart, group: 'ENGAGE' },
   { label: 'Analytics', icon: ChartNoAxesCombined, group: 'BUSINESS' },
   { label: 'Customers', icon: Users, group: 'BUSINESS' },
@@ -419,6 +439,24 @@ function App() {
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
   const [replyText, setReplyText] = useState('');
+
+  // Newsletter Studio & Email Broadcast States
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
+  const [newsletterSubject, setNewsletterSubject] = useState("Weekend Feast: 15% Off Family Soups & Party Jollof!");
+  const [newsletterTitle, setNewsletterTitle] = useState("A Warm Weekend Feast from Chef Margaret's Kitchen");
+  const [newsletterContent, setNewsletterContent] = useState("Hello Ma'Great Food Lover,\n\nWe are delighted to share this weekend's special offerings fresh from our kitchen. Our signature Fishermans Soup, slow-simmered Ofe Owerri, and Smoky Party Jollof are ready for your family gatherings and cozy weekend dinners.\n\nEnjoy complimentary weekend dispatch on all orders placed before 3:00 PM today. Treat yourself to the true taste of home!");
+  const [newsletterButtonText, setNewsletterButtonText] = useState('Explore Menu & Order Now');
+  const [newsletterButtonUrl, setNewsletterButtonUrl] = useState('https://magreattaste.ng');
+  const [testEmailInput, setTestEmailInput] = useState('hello@magreattaste.ng');
+  const [isSendingNewsletter, setIsSendingNewsletter] = useState(false);
+  const [isTestingNewsletter, setIsTestingNewsletter] = useState(false);
+  const [showNewsletterPreview, setShowNewsletterPreview] = useState(false);
+  const [showConfirmBroadcastModal, setShowConfirmBroadcastModal] = useState(false);
+  const [newsletterSearch, setNewsletterSearch] = useState('');
+  const [newSubscriberEmail, setNewSubscriberEmail] = useState('');
+  const [smtpStatus, setSmtpStatus] = useState<{ success: boolean; message: string; host?: string; port?: number; user?: string } | null>(null);
+  const [isCheckingSmtp, setIsCheckingSmtp] = useState(false);
 
   // Settings States (Real-time backend synchronization)
   const [settingsBusinessName, setSettingsBusinessName] = useState("Ma'Great Taste Restaurant & Catering Services");
@@ -632,6 +670,211 @@ function App() {
         }
       })
       .catch(() => {});
+
+    // Real-time Newsletter Subscribers
+    adminFetch(`${API_BASE}/subscribers`)
+      .then(r => r.json())
+      .then(d => {
+        if (d && Array.isArray(d.subscribers)) {
+          setSubscribers(d.subscribers);
+        }
+      })
+      .catch(() => {});
+
+    // Real-time Newsletter Campaigns
+    adminFetch(`${API_BASE}/newsletter/campaigns`)
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d)) {
+          setCampaigns(d);
+        }
+      })
+      .catch(() => {});
+
+    // Live SMTP Engine Status
+    adminFetch(`${API_BASE}/smtp/status`)
+      .then(r => r.json())
+      .then(d => {
+        if (d) setSmtpStatus(d);
+      })
+      .catch(() => {});
+  };
+
+  // Newsletter Studio Handlers
+  const checkSmtpStatus = async () => {
+    setIsCheckingSmtp(true);
+    try {
+      const res = await adminFetch(`${API_BASE}/smtp/status`);
+      const d = await res.json();
+      setSmtpStatus(d);
+      if (d.success) {
+        notify('✅ Mailtrap live SMTP verified and connected!');
+      } else {
+        notify('⚠️ SMTP connection issue: ' + d.message);
+      }
+    } catch (e: any) {
+      setSmtpStatus({ success: false, message: e.message || 'Failed to verify SMTP server' });
+    } finally {
+      setIsCheckingSmtp(false);
+    }
+  };
+
+  const handleSendTestNewsletter = async () => {
+    if (!testEmailInput || !testEmailInput.includes('@')) {
+      notify('⚠️ Please provide a valid test recipient email address.');
+      return;
+    }
+    if (!newsletterSubject || !newsletterTitle || !newsletterContent) {
+      notify('⚠️ Please fill in the subject, title, and message content.');
+      return;
+    }
+    setIsTestingNewsletter(true);
+    try {
+      const res = await adminFetch(`${API_BASE}/newsletter/broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: newsletterSubject,
+          title: newsletterTitle,
+          content: newsletterContent,
+          buttonText: newsletterButtonText,
+          buttonUrl: newsletterButtonUrl,
+          testEmail: testEmailInput.trim()
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        notify(`📬 Test newsletter sent to ${testEmailInput}! Check your inbox.`);
+      } else {
+        notify(`⚠️ Failed to send test: ${data.error || 'Server error'}`);
+      }
+    } catch (err: any) {
+      notify(`⚠️ Error sending test email: ${err.message}`);
+    } finally {
+      setIsTestingNewsletter(false);
+    }
+  };
+
+  const handleBroadcastNewsletter = async () => {
+    if (subscribers.length === 0) {
+      notify('⚠️ You have 0 subscribers to send this newsletter to.');
+      return;
+    }
+    if (!newsletterSubject || !newsletterTitle || !newsletterContent) {
+      notify('⚠️ Please fill in the subject, headline, and newsletter message.');
+      return;
+    }
+    setIsSendingNewsletter(true);
+    setShowConfirmBroadcastModal(false);
+    try {
+      const res = await adminFetch(`${API_BASE}/newsletter/broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: newsletterSubject,
+          title: newsletterTitle,
+          content: newsletterContent,
+          buttonText: newsletterButtonText,
+          buttonUrl: newsletterButtonUrl
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        notify(`🚀 Newsletter successfully dispatched to ${data.sentCount} subscriber(s)!`);
+        if (data.campaign) {
+          setCampaigns(prev => [data.campaign, ...prev]);
+        }
+      } else {
+        notify(`⚠️ Broadcast failed: ${data.error || data.message || 'Check SMTP settings'}`);
+      }
+    } catch (err: any) {
+      notify(`⚠️ Broadcast dispatch error: ${err.message}`);
+    } finally {
+      setIsSendingNewsletter(false);
+    }
+  };
+
+  const handleDeleteSubscriber = async (id: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to remove ${email} from your newsletter subscriber list?`)) return;
+    try {
+      const res = await adminFetch(`${API_BASE}/subscribers/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setSubscribers(prev => prev.filter(s => s.id !== id));
+        notify(`Subscriber ${email} removed.`);
+      } else {
+        notify('Failed to remove subscriber.');
+      }
+    } catch {
+      notify('Error removing subscriber.');
+    }
+  };
+
+  const handleAddSubscriber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubscriberEmail || !newSubscriberEmail.includes('@')) {
+      notify('Please enter a valid email.');
+      return;
+    }
+    try {
+      const res = await adminFetch(`${API_BASE}/newsletter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newSubscriberEmail.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        notify('Subscriber added successfully!');
+        setNewSubscriberEmail('');
+        adminFetch(`${API_BASE}/subscribers`).then(r => r.json()).then(d => {
+          if (d && Array.isArray(d.subscribers)) setSubscribers(d.subscribers);
+        });
+      } else {
+        notify(data.error || data.message || 'Failed to add subscriber');
+      }
+    } catch {
+      notify('Network error adding subscriber');
+    }
+  };
+
+  const handleExportSubscribersCsv = () => {
+    if (subscribers.length === 0) {
+      notify('No subscribers available to export.');
+      return;
+    }
+    const headers = ['ID', 'Email', 'Subscribed At'];
+    const rows = subscribers.map(s => [s.id, s.email, new Date(s.subscribedAt).toLocaleString()]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `magreat-subscribers-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    notify('Subscribers exported to CSV!');
+  };
+
+  const applyNewsletterTemplate = (type: 'weekend' | 'menu' | 'catering') => {
+    if (type === 'weekend') {
+      setNewsletterSubject("Weekend Feast: 15% Off Family Soups & Party Jollof!");
+      setNewsletterTitle("A Warm Weekend Feast from Chef Margaret's Kitchen");
+      setNewsletterContent("Hello Ma'Great Food Lover,\n\nWe are delighted to share this weekend's special offerings fresh from our kitchen. Our signature Fishermans Soup, slow-simmered Ofe Owerri, and Smoky Party Jollof are ready for your family gatherings and cozy weekend dinners.\n\nEnjoy complimentary weekend dispatch on all orders placed before 3:00 PM today. Treat yourself to the true taste of home!");
+      setNewsletterButtonText('Explore Menu & Order Now');
+      setNewsletterButtonUrl('https://magreattaste.ng');
+    } else if (type === 'menu') {
+      setNewsletterSubject("✨ New Seasonal Menu: Authentic Delicacies Now Available!");
+      setNewsletterTitle("Exciting New Dishes Just Added to Our Daily Menu");
+      setNewsletterContent("Dear Valued Customer,\n\nChef Margaret has introduced three new seasonal chef specials this month!\n\n• Seafood Okra Deluxe with Jumbo Tiger Prawns\n• Native Goat Meat Jollof Rice with Roasted Plantain\n• Slow-Cooked Fisherman Broth\n\nCooked fresh on order with hand-selected local market ingredients. Order today for direct delivery to your home or office.");
+      setNewsletterButtonText('See New Dishes');
+      setNewsletterButtonUrl('https://magreattaste.ng');
+    } else if (type === 'catering') {
+      setNewsletterSubject("🎉 Planning an Event or Corporate Gathering? Book Ma'Great Taste Catering!");
+      setNewsletterTitle("Elevate Your Next Event with Unforgettable Cuisine");
+      setNewsletterContent("Hello Event Planner & Host,\n\nFrom intimate family celebrations to 500-guest corporate banquets, Ma'Great Taste delivers flawless event catering across Lagos.\n\nOur full-service packages include on-site hot chaffing stations, professional uniformed service staff, and custom menus crafted to your budget and taste preferences.\n\nReserve your event date this month to unlock a complimentary live grill or small-chops bar!");
+      setNewsletterButtonText('Request Catering Quote');
+      setNewsletterButtonUrl('https://magreattaste.ng');
+    }
+    notify('Template applied to composer!');
   };
 
   // Real-time Settings Save Handler
@@ -1642,6 +1885,7 @@ function App() {
                 {section === 'Catering & events' && 'Catering & Events'}
                 {section === 'Meal plans' && 'Meal Plans & Subscriptions'}
                 {section === 'Messages' && 'Customer Messages'}
+                {section === 'Newsletter & broadcasts' && 'Newsletter & Email Broadcasts'}
                 {section === 'Saved meals & reminders' && 'Saved Meals & Automated Meal Reminders'}
                 {section === 'Analytics' && 'Business Analytics'}
                 {section === 'Customers' && 'Customers Directory & Discounts'}
@@ -1653,6 +1897,8 @@ function App() {
                 {section === 'Menu management' && 'Add dishes, update pricing, upload dish photos, and manage availability.'}
                 {section === 'Catering & events' && 'Manage high-value catering leads, corporate bookings, send quotes, and discuss menus.'}
                 {section === 'Meal plans' && 'Create and edit meal prep packages and freezer stocking subscriptions.'}
+                {section === 'Messages' && 'Enquiries, reviews, and questions sent from the website contact forms.'}
+                {section === 'Newsletter & broadcasts' && 'Compose, preview, and dispatch rich HTML email campaigns to all website newsletter subscribers via Mailtrap live SMTP.'}
                 {section === 'Saved meals & reminders' && 'Dispatch manual bulk reminders to selected customers, or configure automated alerts for Breakfast, Lunch, Dinner, or Desserts.'}
                 {section === 'Customers' && 'Manage individual VIPs, corporate companies, assign discounts and vouchers.'}
               </p>
@@ -3029,6 +3275,429 @@ function App() {
                   </div>
                 )}
               </section>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* 8B. NEWSLETTER BROADCAST STUDIO & SUBSCRIBERS */}
+          {/* ========================================================= */}
+          {section === 'Newsletter & broadcasts' && (
+            <div>
+              {/* Top Bar with Mailtrap SMTP Connection Status */}
+              <div className="newsletter-top-strip">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <span className={`smtp-badge ${smtpStatus?.success ? 'online' : 'offline'}`}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: smtpStatus?.success ? '#10b981' : '#ef4444' }} />
+                    {smtpStatus?.success ? 'Mailtrap Live SMTP Active' : (smtpStatus?.message || 'SMTP Status Pending')}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Host: <strong>live.smtp.mailtrap.io:587</strong> • Sender: <strong>hello@magreattaste.ng</strong>
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    className="secondary-btn"
+                    style={{ fontSize: 12, padding: '7px 14px' }}
+                    onClick={checkSmtpStatus}
+                    disabled={isCheckingSmtp}
+                  >
+                    <Sparkles size={13} /> {isCheckingSmtp ? 'Verifying...' : 'Verify SMTP Connection'}
+                  </button>
+                  <button
+                    className="secondary-btn"
+                    style={{ fontSize: 12, padding: '7px 14px' }}
+                    onClick={handleExportSubscribersCsv}
+                  >
+                    <Download size={13} /> Export CSV ({subscribers.length})
+                  </button>
+                </div>
+              </div>
+
+              {/* KPI Stat Cards */}
+              <div className="stat-grid" style={{ marginBottom: 24 }}>
+                <div className="stat-card">
+                  <div className="stat-head">
+                    <span>Active Subscribers</span>
+                    <Mail size={18} color="var(--brand-navy)" />
+                  </div>
+                  <div className="stat-value">{subscribers.length}</div>
+                  <div className="stat-sub">Website newsletter readers</div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-head">
+                    <span>Campaigns Sent</span>
+                    <Send size={18} color="var(--brand-red)" />
+                  </div>
+                  <div className="stat-value">{campaigns.length}</div>
+                  <div className="stat-sub">Dispatched announcements</div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-head">
+                    <span>Total Emails Delivered</span>
+                    <PackageCheck size={18} color="#059669" />
+                  </div>
+                  <div className="stat-value">
+                    {campaigns.reduce((acc, c) => acc + (c.recipientCount || 0), 0)}
+                  </div>
+                  <div className="stat-sub">Across all broadcasts</div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-head">
+                    <span>Delivery Channel</span>
+                    <ShieldCheck size={18} color="var(--brand-blue)" />
+                  </div>
+                  <div className="stat-value" style={{ fontSize: 20 }}>Mailtrap</div>
+                  <div className="stat-sub">TLS Encrypted Port 587</div>
+                </div>
+              </div>
+
+              {/* Main Composer & Interactive Preview Grid */}
+              <div className="newsletter-grid">
+                {/* Left: Compose Form */}
+                <section className="panel" style={{ padding: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: 17, color: 'var(--brand-navy)' }}>Compose Announcement</h3>
+                      <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                        Write your newsletter. It will be sent with official Ma'Great Taste email branding.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Preset Template Chips */}
+                  <div style={{ marginBottom: 16 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+                      Quick Templates:
+                    </span>
+                    <div className="template-presets">
+                      <button type="button" className="template-chip" onClick={() => applyNewsletterTemplate('weekend')}>
+                        🍲 Weekend Feast 15% Off
+                      </button>
+                      <button type="button" className="template-chip" onClick={() => applyNewsletterTemplate('menu')}>
+                        ✨ New Seasonal Dishes
+                      </button>
+                      <button type="button" className="template-chip" onClick={() => applyNewsletterTemplate('catering')}>
+                        🎉 Corporate &amp; Event Catering
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Form fields */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                        Email Subject Line *
+                      </label>
+                      <input
+                        type="text"
+                        value={newsletterSubject}
+                        onChange={e => setNewsletterSubject(e.target.value)}
+                        placeholder="e.g. Weekend Feast: 15% Off Family Soups & Party Jollof!"
+                        style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                        Email Headline Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={newsletterTitle}
+                        onChange={e => setNewsletterTitle(e.target.value)}
+                        placeholder="e.g. A Warm Weekend Feast from Chef Margaret's Kitchen"
+                        style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                        Message Body * <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(Paragraphs separated by blank lines)</span>
+                      </label>
+                      <textarea
+                        rows={7}
+                        value={newsletterContent}
+                        onChange={e => setNewsletterContent(e.target.value)}
+                        placeholder="Write your email announcement here..."
+                        style={{ width: '100%', padding: '12px', border: '1px solid var(--line)', borderRadius: 8, resize: 'vertical', lineHeight: 1.6 }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                          Call-to-Action Button Label
+                        </label>
+                        <input
+                          type="text"
+                          value={newsletterButtonText}
+                          onChange={e => setNewsletterButtonText(e.target.value)}
+                          placeholder="e.g. Explore Menu & Order"
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8 }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+                          Button Target URL
+                        </label>
+                        <input
+                          type="text"
+                          value={newsletterButtonUrl}
+                          onChange={e => setNewsletterButtonUrl(e.target.value)}
+                          placeholder="https://magreattaste.ng"
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8 }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Test email dispatch */}
+                    <div className="test-dispatch-bar">
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+                          Send a Single Test Email First
+                        </span>
+                        <input
+                          type="email"
+                          value={testEmailInput}
+                          onChange={e => setTestEmailInput(e.target.value)}
+                          placeholder="your-email@example.com"
+                          style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 13 }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        style={{ marginTop: 18 }}
+                        disabled={isTestingNewsletter}
+                        onClick={handleSendTestNewsletter}
+                      >
+                        <Send size={13} /> {isTestingNewsletter ? 'Sending Test...' : 'Send Test'}
+                      </button>
+                    </div>
+
+                    {/* Primary dispatch actions */}
+                    <div className="dispatch-actions-row">
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={() => setShowNewsletterPreview(true)}
+                      >
+                        <ExternalLink size={14} /> Full Screen Preview
+                      </button>
+
+                      <button
+                        type="button"
+                        className="primary-btn"
+                        style={{ background: 'var(--brand-red)', border: 'none', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}
+                        disabled={isSendingNewsletter || subscribers.length === 0}
+                        onClick={() => setShowConfirmBroadcastModal(true)}
+                      >
+                        <Send size={15} />
+                        {isSendingNewsletter ? 'Broadcasting...' : `🚀 Broadcast to All (${subscribers.length}) Subscribers`}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Right: Live Mockup Preview Card */}
+                <div>
+                  <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-navy)' }}>
+                      👁️ Real-time Email Preview
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      What your customers will see
+                    </span>
+                  </div>
+
+                  <div className="email-mockup-wrapper">
+                    <div className="email-mockup-card">
+                      {/* Email Header */}
+                      <div className="email-mockup-header">
+                        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 1, color: '#fed485' }}>
+                          MA' GREAT TASTE
+                        </div>
+                        <div style={{ fontSize: 11, color: '#cbd5e1', marginTop: 4 }}>
+                          Authentic Nigerian &amp; Intercontinental Cuisine
+                        </div>
+                      </div>
+
+                      {/* Headline banner */}
+                      <div style={{ background: '#fff8f0', borderBottom: '2px solid #fed485', padding: '14px 18px' }}>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: '#182838' }}>
+                          {newsletterTitle || 'Your Announcement Headline'}
+                        </div>
+                      </div>
+
+                      {/* Email Body */}
+                      <div className="email-mockup-body">
+                        {newsletterContent.split(/\n{2,}/).map((p, idx) => (
+                          <p key={idx} style={{ margin: '0 0 12px', fontSize: 13, color: '#334155', lineHeight: 1.6 }}>
+                            {p}
+                          </p>
+                        ))}
+
+                        {newsletterButtonText && (
+                          <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                            <span className="email-cta-preview-btn">
+                              {newsletterButtonText}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Trust badges */}
+                      <div style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '10px 14px', fontSize: 10, color: '#64748b', textAlign: 'center' }}>
+                        🍲 Fresh Daily &bull; ⚡ Fast Dispatch &bull; 🎉 Party Catering
+                      </div>
+
+                      {/* Email Footer */}
+                      <div className="email-mockup-footer">
+                        <strong style={{ color: '#fed485', display: 'block', marginBottom: 2 }}>Ma'Great Taste &bull; Lagos, Nigeria</strong>
+                        <span>You received this email because you subscribed at magreattaste.ng</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subscribers List & Management Table */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 24, alignItems: 'start' }}>
+                <section className="panel" style={{ padding: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: 16, color: 'var(--brand-navy)' }}>
+                        Subscribers Directory ({subscribers.length})
+                      </h3>
+                      <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                        Audience receiving your email newsletters
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <input
+                        type="text"
+                        placeholder="Search subscriber..."
+                        value={newsletterSearch}
+                        onChange={e => setNewsletterSearch(e.target.value)}
+                        style={{ padding: '6px 10px', fontSize: 12, border: '1px solid var(--line)', borderRadius: 6 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Manual Subscriber Add Bar */}
+                  <form onSubmit={handleAddSubscriber} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    <input
+                      type="email"
+                      value={newSubscriberEmail}
+                      onChange={e => setNewSubscriberEmail(e.target.value)}
+                      placeholder="Add customer email directly..."
+                      style={{ flex: 1, padding: '7px 10px', fontSize: 12, border: '1px solid var(--line)', borderRadius: 6 }}
+                    />
+                    <button type="submit" className="secondary-btn" style={{ fontSize: 12, padding: '7px 14px' }}>
+                      Add Subscriber
+                    </button>
+                  </form>
+
+                  {/* Table */}
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Email Address</th>
+                          <th>Subscribed Date</th>
+                          <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subscribers
+                          .filter(s => !newsletterSearch || s.email.toLowerCase().includes(newsletterSearch.toLowerCase()))
+                          .map(sub => (
+                            <tr key={sub.id}>
+                              <td>
+                                <strong style={{ color: 'var(--brand-navy)' }}>{sub.email}</strong>
+                              </td>
+                              <td style={{ fontSize: 12, color: 'var(--muted)' }}>
+                                {new Date(sub.subscribedAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="secondary-btn"
+                                  style={{ padding: '4px 8px', fontSize: 11, color: '#dc2626' }}
+                                  onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                                  title="Unsubscribe / Remove"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        {subscribers.length === 0 && (
+                          <tr>
+                            <td colSpan={3} style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--muted)' }}>
+                              No subscribers found. New subscribers will appear here when customers enter their email on your website.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                {/* Sent Campaigns History */}
+                <section className="panel" style={{ padding: 24 }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <h3 style={{ margin: 0, fontSize: 16, color: 'var(--brand-navy)' }}>
+                      Campaigns History ({campaigns.length})
+                    </h3>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                      Past broadcasts dispatched to your customer list
+                    </p>
+                  </div>
+
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Subject &amp; Date</th>
+                          <th>Recipients</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {campaigns.map(camp => (
+                          <tr key={camp.id}>
+                            <td>
+                              <strong style={{ fontSize: 13, color: 'var(--brand-navy)', display: 'block' }}>{camp.subject}</strong>
+                              <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                                {new Date(camp.sentAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ fontWeight: 700, color: 'var(--brand-navy)' }}>{camp.recipientCount}</span> subscribers
+                            </td>
+                            <td>
+                              <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: '#ecfdf5', color: '#065f46' }}>
+                                {camp.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {campaigns.length === 0 && (
+                          <tr>
+                            <td colSpan={3} style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--muted)' }}>
+                              No campaigns dispatched yet. Use the composer on the left to send your first newsletter!
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
             </div>
           )}
 
