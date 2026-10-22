@@ -280,68 +280,7 @@ const initialMealPlans: MealPlanPackage[] = [
 
 const initialCustomers: CustomerRecord[] = [];
 const initialCateringLeads: CateringLead[] = [];
-const initialSavedCustomers: SavedMealCustomer[] = [
-  {
-    id: 'sm-1',
-    customerName: 'Amina Bello',
-    customerEmail: 'amina.bello@example.com',
-    customerPhone: '08023456789',
-    mealType: 'Breakfast',
-    items: [
-      { name: 'Authentic Ghanaian Waakye Bowl', price: 5800, category: 'Breakfast' },
-      { name: 'Golden Fried Plantain (Dodo)', price: 1500, category: 'Breakfast' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 2,
-    lastReminderSentAt: 'Today, 8:15 AM',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'sm-2',
-    customerName: 'Chidi Okafor',
-    customerEmail: 'chidi.okafor@enterprise.ng',
-    customerPhone: '08139876543',
-    mealType: 'Lunch',
-    items: [
-      { name: 'Smoky Party Jollof & Grilled Chicken', price: 6500, category: 'Lunch' },
-      { name: 'Creamy Crunchy Coleslaw', price: 1200, category: 'Lunch' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 4,
-    lastReminderSentAt: 'Yesterday, 12:10 PM',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'sm-3',
-    customerName: 'Folake Adeyemi',
-    customerEmail: 'folake.ade@gmail.com',
-    customerPhone: '09051234567',
-    mealType: 'Dessert & Snacks',
-    items: [
-      { name: 'Warm Cinnamon Puff Puff Platter', price: 2500, category: 'Dessert & Snacks' },
-      { name: 'Golden Flaky Meat Pies (Box of 4)', price: 3200, category: 'Dessert & Snacks' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 1,
-    lastReminderSentAt: '2 days ago, 3:30 PM',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'sm-4',
-    customerName: 'Babajide Davies',
-    customerEmail: 'b.davies@lagosgroup.com',
-    customerPhone: '08077654321',
-    mealType: 'Dinner',
-    items: [
-      { name: 'Rich Egusi Soup with Goat Meat & Pounded Yam', price: 7500, category: 'Dinner' },
-      { name: 'Spicy Peppered Asun Yam Platter', price: 6800, category: 'Dinner' }
-    ],
-    reminderStatus: 'Active',
-    reminderCount: 3,
-    lastReminderSentAt: 'Yesterday, 5:45 PM',
-    createdAt: new Date().toISOString()
-  }
-];
+const initialSavedCustomers: SavedMealCustomer[] = [];
 
 const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
@@ -608,7 +547,7 @@ function App() {
       .then(savedData => {
         if (Array.isArray(savedData)) {
           setBackendOnline(true);
-          if (savedData.length > 0) setSavedCustomers(savedData);
+          setSavedCustomers(savedData);
         }
       })
       .catch(() => {});
