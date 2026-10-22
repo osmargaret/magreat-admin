@@ -1861,6 +1861,158 @@ tbody tr:hover {
   margin: 0 auto 14px;
 }
 
+.message-item.active {
+  background: #f1f5f9;
+  border-left: 3px solid var(--brand-red);
+}
+
+.message-detail-active {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.message-sender-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.message-detail-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.message-detail-subject {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--brand-navy);
+  margin: 0;
+}
+
+.message-meta-strip {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.message-detail-body {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.message-reply-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message-reply-textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.message-reply-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Analytics Leaderboard & Cards */
+.analytics-leaderboard {
+  margin-top: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.leaderboard-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.leaderboard-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 12px;
+}
+
+.dish-rank-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dish-rank-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: var(--brand-navy);
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.dish-rank-badge.top1 {
+  background: #fef08a;
+  color: #854d0e;
+}
+.dish-rank-badge.top2 {
+  background: #e2e8f0;
+  color: #334155;
+}
+.dish-rank-badge.top3 {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.dish-thumbnail {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
 /* =====================================================================
    MODALS, DRAWERS & RECEIPTS
    ===================================================================== */

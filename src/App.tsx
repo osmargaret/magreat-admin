@@ -342,6 +342,8 @@ function App() {
   const [newCustSegment, setNewCustSegment] = useState<'Corporate' | 'Loyal VIP' | 'Returning' | 'Meal plan' | 'New'>('Corporate');
 
   const [messages, setMessages] = useState<any[]>([]);
+  const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   // Settings States (Real-time backend synchronization)
   const [settingsBusinessName, setSettingsBusinessName] = useState("Ma'Great Taste Restaurant & Catering Services");
@@ -623,6 +625,31 @@ function App() {
       ),
     [foods, search, filter]
   );
+
+  // Dynamic metrics for Overview & Analytics
+  const grossRevenue = useMemo(() => orders.reduce((sum, o) => sum + (o.total || 0), 0), [orders]);
+  const deliveredCount = useMemo(() => orders.filter(o => o.status === 'Delivered').length, [orders]);
+  const averageOrderValue = useMemo(() => (orders.length > 0 ? Math.round(grossRevenue / orders.length) : 0), [orders, grossRevenue]);
+
+  const categoryStats = useMemo(() => {
+    const total = foods.length || 1;
+    const nigerian = foods.filter(f => f.category === 'Nigerian').length;
+    const soups = foods.filter(f => f.category === 'Soups & Swallows').length;
+    const breakfast = foods.filter(f => f.category === 'Breakfast').length;
+    const others = foods.filter(f => !['Nigerian', 'Soups & Swallows', 'Breakfast'].includes(f.category)).length;
+
+    return [
+      { name: 'Nigerian Rice & Stews', count: nigerian, pct: Math.round((nigerian / total) * 100), color: '#c6381e' },
+      { name: 'Traditional Soups & Swallows', count: soups, pct: Math.round((soups / total) * 100), color: '#d99c2b' },
+      { name: 'Breakfast & Small Chops', count: breakfast, pct: Math.round((breakfast / total) * 100), color: '#182838' },
+      { name: 'Grills & Specialties', count: others, pct: Math.round((others / total) * 100), color: '#3f6e8e' }
+    ];
+  }, [foods]);
+
+  // Top performing signature dishes by order count
+  const topDishes = useMemo(() => {
+    return [...foods].sort((a, b) => (b.orders || 0) - (a.orders || 0)).slice(0, 6);
+  }, [foods]);
 
   // Global search quick hits for topbar
   const searchResults = useMemo(() => {
@@ -978,30 +1005,96 @@ function App() {
     window.open(`https://wa.me/${intlPhone}?text=${text}`, '_blank');
   };
 
-  // Add new customer
-  const saveNewCustomer = () => {
+  // Add new customer with live backend synchronization
+  const saveNewCustomer = async () => {
     if (!newCustName.trim() || !newCustEmail.trim()) {
       notify('Enter customer name and email.');
       return;
     }
-    const created: CustomerRecord = {
-      id: `CUST-${Math.floor(100 + Math.random() * 900)}`,
+    const payload = {
       name: newCustName.trim(),
       email: newCustEmail.trim(),
       phone: newCustPhone.trim() || '0800 000 0000',
       companyName: newCustCompany.trim() || undefined,
-      ordersCount: 0,
-      totalSpent: 0,
-      lastOrderDate: 'New Customer',
       segment: newCustSegment
     };
+    const tempId = `CUST-${Math.floor(100 + Math.random() * 900)}`;
+    const created: CustomerRecord = {
+      id: tempId,
+      ...payload,
+      ordersCount: 0,
+      totalSpent: 0,
+      lastOrderDate: 'New Customer'
+    };
     setCustomers(prev => [created, ...prev]);
-    notify(`Customer account for "${newCustName}" created!`);
     setShowAddCustomerModal(false);
+    notify(`Customer account for "${newCustName}" created!`);
     setNewCustName('');
     setNewCustEmail('');
     setNewCustPhone('');
     setNewCustCompany('');
+
+    try {
+      const res = await fetch(`${API_BASE}/customers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        if (saved && saved.id) {
+          setCustomers(prev => prev.map(c => (c.id === tempId ? { ...c, id: saved.id } : c)));
+        }
+      }
+    } catch (err) {
+      console.warn('Backend sync:', err);
+    }
+  };
+
+  // Dedicated customer directory export
+  const exportCustomersCsv = () => {
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      'Customer ID,Name,Email,Phone,Company,Segment,Orders Count,Total Spent,Active Discount\n' +
+      customers
+        .map(c =>
+          `"${c.id}","${c.name}","${c.email}","${c.phone}","${c.companyName || 'N/A'}","${c.segment}","${c.ordersCount || 0}","${c.totalSpent || 0}","${c.discount ? c.discount.code + ' (' + c.discount.value + (c.discount.type === 'percent' ? '%' : ' NGN') + ')' : 'None'}"`
+        )
+        .join('\n');
+    const encoded = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encoded);
+    link.setAttribute('download', `magreat-customers-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    notify('Customer directory exported successfully.');
+  };
+
+  // Message conversation handlers
+  const openMessage = (m: any) => {
+    setSelectedMessage(m);
+    setReplyText(`Hello ${m.name},\nThank you for reaching out to Ma'Great Taste Restaurant & Catering!\nRegarding your enquiry: "${m.subject}":\n\n`);
+    if (m.unread) {
+      setMessages(prev => prev.map(item => (item.id === m.id ? { ...item, unread: false } : item)));
+      fetch(`${API_BASE}/messages/${m.id}/read`, { method: 'PATCH' }).catch(() => {});
+    }
+  };
+
+  const toggleMessageUnread = (m: any) => {
+    const nextUnread = !m.unread;
+    setMessages(prev => prev.map(item => (item.id === m.id ? { ...item, unread: nextUnread } : item)));
+    if (selectedMessage && selectedMessage.id === m.id) {
+      setSelectedMessage({ ...selectedMessage, unread: nextUnread });
+    }
+    notify(nextUnread ? 'Marked as unread.' : 'Marked as read.');
+  };
+
+  const sendWhatsAppReply = (m: any) => {
+    const rawPhone = m.phone ? String(m.phone).replace(/[^0-9]/g, '') : '';
+    const intlPhone = rawPhone.startsWith('0') ? '234' + rawPhone.slice(1) : rawPhone || '2348034567890';
+    const text = encodeURIComponent(replyText.trim() || `Hello ${m.name}! Thank you for reaching out to Ma'Great Taste. We are happy to assist with your enquiry "${m.subject}".`);
+    window.open(`https://wa.me/${intlPhone}?text=${text}`, '_blank');
   };
 
   // ==========================================
@@ -1567,8 +1660,8 @@ function App() {
                     </span>
                   </div>
                   <div className="revenue-total">
-                    <strong>₦1,248,500</strong>
-                    <small>Past 7 days online revenue</small>
+                    <strong>{money(grossRevenue)}</strong>
+                    <small>{orders.length > 0 ? `${orders.length} orders fulfilled online` : 'Live online kitchen revenue'}</small>
                   </div>
                   <div className="chart">
                     <div className="chart-y">
@@ -1617,8 +1710,8 @@ function App() {
                 <section className="panel category-panel">
                   <div className="panel-head">
                     <div>
-                      <h3>Sales by category</h3>
-                      <p>Top ordered Nigerian dishes</p>
+                      <h3>Menu category distribution</h3>
+                      <p>Active dishes in kitchen catalogue</p>
                     </div>
                     <button className="dots-btn" onClick={() => setSection('Menu management')}>
                       <ArrowUpRight size={16} />
@@ -1627,36 +1720,20 @@ function App() {
                   <div className="donut-wrap">
                     <div className="donut">
                       <div>
-                        <strong>{orders.length + 80}</strong>
-                        <small>Total meals</small>
+                        <strong>{foods.length}</strong>
+                        <small>Total dishes</small>
                       </div>
                     </div>
                   </div>
                   <div className="category-list">
-                    <div className="category-row">
-                      <span className="category-name">
-                        <i style={{ background: '#c6381e' }} /> Nigerian Rice & Stews
-                      </span>
-                      <strong>52%</strong>
-                    </div>
-                    <div className="category-row">
-                      <span className="category-name">
-                        <i style={{ background: '#d99c2b' }} /> Traditional Soups & Swallows
-                      </span>
-                      <strong>26%</strong>
-                    </div>
-                    <div className="category-row">
-                      <span className="category-name">
-                        <i style={{ background: '#3f6e8e' }} /> Continental & Grills
-                      </span>
-                      <strong>14%</strong>
-                    </div>
-                    <div className="category-row">
-                      <span className="category-name">
-                        <i style={{ background: '#182838' }} /> Breakfast & Small Chops
-                      </span>
-                      <strong>8%</strong>
-                    </div>
+                    {categoryStats.map(cat => (
+                      <div className="category-row" key={cat.name}>
+                        <span className="category-name">
+                          <i style={{ background: cat.color }} /> {cat.name} ({cat.count})
+                        </span>
+                        <strong>{cat.pct}%</strong>
+                      </div>
+                    ))}
                   </div>
                 </section>
               </div>
@@ -2451,7 +2528,7 @@ function App() {
                 <button className="primary-btn" onClick={() => setShowAddCustomerModal(true)}>
                   <Plus size={15} /> Add customer / company
                 </button>
-                <button className="secondary-btn" onClick={downloadReport}>
+                <button className="secondary-btn" onClick={exportCustomersCsv}>
                   <Download size={15} /> Export customers
                 </button>
               </div>
@@ -2593,15 +2670,19 @@ function App() {
                   </div>
                 ) : (
                   messages.map((m, idx) => (
-                    <div className={`message-item ${m.unread ? 'message-unread' : ''}`} key={idx}>
-                      <div className="message-avatar">{m.name[0]}</div>
+                    <div
+                      className={`message-item ${m.unread ? 'message-unread' : ''} ${selectedMessage?.id === m.id ? 'active' : ''}`}
+                      key={m.id || idx}
+                      onClick={() => openMessage(m)}
+                    >
+                      <div className="message-avatar">{m.name ? m.name[0].toUpperCase() : 'M'}</div>
                       <div className="message-preview">
                         <div>
                           <strong>{m.name}</strong>
-                          <small>{m.time}</small>
+                          <small>{m.time || (m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'Recent')}</small>
                         </div>
-                        <b>{m.subject}</b>
-                        <p>{m.body}</p>
+                        <b>{m.subject || 'Website Enquiry'}</b>
+                        <p>{m.body || m.message || 'No message content'}</p>
                       </div>
                     </div>
                   ))
@@ -2609,13 +2690,79 @@ function App() {
               </section>
 
               <section className="panel message-detail">
-                <div className="message-detail-empty">
-                  <div className="detail-icon">
-                    <MessageSquare size={26} />
+                {!selectedMessage ? (
+                  <div className="message-detail-empty">
+                    <div className="detail-icon">
+                      <MessageSquare size={26} />
+                    </div>
+                    <h3>Select a conversation</h3>
+                    <p>Choose an enquiry from the left to read customer requirements and send a quotation.</p>
                   </div>
-                  <h3>Select a conversation</h3>
-                  <p>Choose an enquiry from the left to read customer requirements and send a quotation.</p>
-                </div>
+                ) : (
+                  <div className="message-detail-active">
+                    <div className="message-detail-header">
+                      <div className="message-sender-info">
+                        <div className="message-avatar" style={{ width: 44, height: 44, fontSize: 16 }}>
+                          {selectedMessage.name ? selectedMessage.name[0].toUpperCase() : 'M'}
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: 15, color: 'var(--brand-navy)' }}>{selectedMessage.name}</h3>
+                          <div className="message-meta-strip">
+                            <span><b>Email:</b> {selectedMessage.email || 'N/A'}</span>
+                            <span><b>Phone:</b> {selectedMessage.phone || 'N/A'}</span>
+                            <span><b>Received:</b> {selectedMessage.time || (selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString() : 'Recent')}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="message-detail-actions">
+                        <button
+                          className="secondary-btn"
+                          style={{ padding: '6px 10px', fontSize: 11 }}
+                          onClick={() => toggleMessageUnread(selectedMessage)}
+                        >
+                          {selectedMessage.unread ? 'Mark as read' : 'Mark as unread'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="message-detail-subject">{selectedMessage.subject || 'Customer Enquiry'}</h4>
+                      <div className="message-detail-body">
+                        {selectedMessage.body || selectedMessage.message || 'No additional message text provided.'}
+                      </div>
+                    </div>
+
+                    <div className="message-reply-box">
+                      <strong style={{ fontSize: 12, color: 'var(--brand-navy)' }}>
+                        <MessageCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+                        Reply to {selectedMessage.name}
+                      </strong>
+                      <textarea
+                        className="message-reply-textarea"
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        placeholder="Type your response message here..."
+                      />
+                      <div className="message-reply-actions">
+                        <button
+                          className="secondary-btn"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(replyText);
+                            notify('Reply text copied to clipboard!');
+                          }}
+                        >
+                          <Copy size={13} /> Copy Reply
+                        </button>
+                        <button
+                          className="whatsapp-action-btn"
+                          onClick={() => sendWhatsAppReply(selectedMessage)}
+                        >
+                          <Send size={13} /> Reply on WhatsApp
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
             </div>
           )}
@@ -2624,22 +2771,124 @@ function App() {
           {/* 9. ANALYTICS */}
           {/* ========================================================= */}
           {section === 'Analytics' && (
-            <div className="stat-grid">
-              <div className="stat-card">
-                <strong className="stat-value">₦4,280,000</strong>
-                <p>Quarterly Total Revenue</p>
+            <div>
+              <div className="stat-grid">
+                <div className="stat-card">
+                  <div className="stat-top">
+                    <div className="stat-icon green">
+                      <CircleDollarSign />
+                    </div>
+                    <span className="stat-change up">Live</span>
+                  </div>
+                  <strong className="stat-value">{money(grossRevenue)}</strong>
+                  <p>Gross Store Revenue</p>
+                  <div className="stat-bottom">
+                    <small>{orders.length} orders recorded</small>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-top">
+                    <div className="stat-icon orange">
+                      <ShoppingBag />
+                    </div>
+                    <span className="stat-change up">AOV</span>
+                  </div>
+                  <strong className="stat-value">{money(averageOrderValue)}</strong>
+                  <p>Average Order Value</p>
+                  <div className="stat-bottom">
+                    <small>Per customer basket</small>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-top">
+                    <div className="stat-icon blue">
+                      <PackageCheck />
+                    </div>
+                    <span className="stat-change up">Fulfilment</span>
+                  </div>
+                  <strong className="stat-value">{orders.length > 0 ? Math.round((deliveredCount / orders.length) * 100) : 100}%</strong>
+                  <p>Order Completion Rate</p>
+                  <div className="stat-bottom">
+                    <small>{deliveredCount} orders delivered</small>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-top">
+                    <div className="stat-icon purple">
+                      <UtensilsCrossed />
+                    </div>
+                    <span className="stat-change neutral">{foods.length} items</span>
+                  </div>
+                  <strong className="stat-value">{foods.filter(f => f.status === 'Available').length}</strong>
+                  <p>Active Menu Items Available</p>
+                  <div className="stat-bottom">
+                    <small>{foods.filter(f => f.status === 'Sold out').length} temporarily sold out</small>
+                  </div>
+                </div>
               </div>
-              <div className="stat-card">
-                <strong className="stat-value">₦18,500</strong>
-                <p>Average Order Value</p>
-              </div>
-              <div className="stat-card">
-                <strong className="stat-value">4.9 / 5.0</strong>
-                <p>Customer Satisfaction Rating</p>
-              </div>
-              <div className="stat-card">
-                <strong className="stat-value">84%</strong>
-                <p>Returning Customer Rate</p>
+
+              {/* Top Performing Dishes Leaderboard */}
+              <div className="analytics-leaderboard">
+                <div className="panel-head">
+                  <div>
+                    <h3>Top Performing Signature Dishes</h3>
+                    <p>Ranked by order count and customer popularity</p>
+                  </div>
+                  <button className="secondary-btn" onClick={() => setSection('Menu management')}>
+                    View full catalogue <ArrowUpRight size={14} />
+                  </button>
+                </div>
+
+                <table className="leaderboard-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 60 }}>RANK</th>
+                      <th>DISH NAME & PHOTO</th>
+                      <th>CATEGORY</th>
+                      <th>PRICE</th>
+                      <th>ORDERS</th>
+                      <th>EST. REVENUE</th>
+                      <th>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topDishes.map((dish, idx) => (
+                      <tr key={dish.id}>
+                        <td>
+                          <span className={`dish-rank-badge ${idx === 0 ? 'top1' : idx === 1 ? 'top2' : idx === 2 ? 'top3' : ''}`}>
+                            #{idx + 1}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="dish-rank-cell">
+                            <img
+                              src={resolveMealImage(dish.image)}
+                              alt={dish.name}
+                              className="dish-thumbnail"
+                              onError={e => { (e.currentTarget as any).src = FALLBACK_FOOD_IMG; }}
+                            />
+                            <div>
+                              <strong>{dish.name}</strong>
+                              {dish.tag && <small className="food-badge-tag" style={{ marginLeft: 6 }}>{dish.tag}</small>}
+                            </div>
+                          </div>
+                        </td>
+                        <td>{dish.category}</td>
+                        <td><strong>{money(dish.price)}</strong></td>
+                        <td><b>{dish.orders || 0} orders</b></td>
+                        <td><strong style={{ color: 'var(--brand-red)' }}>{money((dish.orders || 0) * dish.price)}</strong></td>
+                        <td>
+                          <span className={`status ${dish.status === 'Available' ? 'status-green' : 'status-red'}`}>
+                            {dish.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
