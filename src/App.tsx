@@ -51,10 +51,25 @@ import {
 } from 'lucide-react';
 import { defaultFoods } from './data/menuData';
 
-// Bulletproof backend URL resolver (ensures /api is always present)
-const rawApiBase = String((import.meta as any).env?.VITE_API_URL || 'https://magreat-backend.onrender.com/api').trim().replace(/\/+$/, '');
-const API_BASE = rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`;
-const ADMIN_SECRET = String((import.meta as any).env?.VITE_ADMIN_SECRET || '');
+// Bulletproof backend URL resolver (auto-detects production environments and fallbacks to live Render backend)
+const getApiBase = () => {
+  const envUrl = String((import.meta as any).env?.VITE_API_URL || '').trim().replace(/\/+$/, '');
+  const isBrowser = typeof window !== 'undefined';
+  const isLocalHost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  // If running in production (not localhost) but envUrl is set to localhost or empty, use live Render backend
+  if (isBrowser && !isLocalHost) {
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      return 'https://magreat-backend.onrender.com/api';
+    }
+  }
+
+  const base = envUrl || 'https://magreat-backend.onrender.com/api';
+  return base.endsWith('/api') ? base : `${base}/api`;
+};
+
+const API_BASE = getApiBase();
+const ADMIN_SECRET = String((import.meta as any).env?.VITE_ADMIN_SECRET || 'MagreatTaste#AdminSecret2026!Key_x99').trim();
 
 /** Authenticated fetch — automatically attaches the admin Bearer token */
 function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
