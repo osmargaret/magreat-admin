@@ -158,10 +158,11 @@ export type SavedMealCustomer = {
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
-  items: { name: string; price?: number }[];
+  items: { name: string; price?: number; category?: string }[];
   reminderStatus: 'Active' | 'Unsubscribed' | 'Paused';
   reminderCount: number;
   lastReminderSentAt?: string;
+  mealType?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Dessert & Snacks';
   createdAt: string;
 };
 
@@ -249,7 +250,68 @@ const initialMealPlans: MealPlanPackage[] = [
 
 const initialCustomers: CustomerRecord[] = [];
 const initialCateringLeads: CateringLead[] = [];
-const initialSavedCustomers: SavedMealCustomer[] = [];
+const initialSavedCustomers: SavedMealCustomer[] = [
+  {
+    id: 'sm-1',
+    customerName: 'Amina Bello',
+    customerEmail: 'amina.bello@example.com',
+    customerPhone: '08023456789',
+    mealType: 'Breakfast',
+    items: [
+      { name: 'Authentic Ghanaian Waakye Bowl', price: 5800, category: 'Breakfast' },
+      { name: 'Golden Fried Plantain (Dodo)', price: 1500, category: 'Breakfast' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 2,
+    lastReminderSentAt: 'Today, 8:15 AM',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'sm-2',
+    customerName: 'Chidi Okafor',
+    customerEmail: 'chidi.okafor@enterprise.ng',
+    customerPhone: '08139876543',
+    mealType: 'Lunch',
+    items: [
+      { name: 'Smoky Party Jollof & Grilled Chicken', price: 6500, category: 'Lunch' },
+      { name: 'Creamy Crunchy Coleslaw', price: 1200, category: 'Lunch' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 4,
+    lastReminderSentAt: 'Yesterday, 12:10 PM',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'sm-3',
+    customerName: 'Folake Adeyemi',
+    customerEmail: 'folake.ade@gmail.com',
+    customerPhone: '09051234567',
+    mealType: 'Dessert & Snacks',
+    items: [
+      { name: 'Warm Cinnamon Puff Puff Platter', price: 2500, category: 'Dessert & Snacks' },
+      { name: 'Golden Flaky Meat Pies (Box of 4)', price: 3200, category: 'Dessert & Snacks' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 1,
+    lastReminderSentAt: '2 days ago, 3:30 PM',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'sm-4',
+    customerName: 'Babajide Davies',
+    customerEmail: 'b.davies@lagosgroup.com',
+    customerPhone: '08077654321',
+    mealType: 'Dinner',
+    items: [
+      { name: 'Rich Egusi Soup with Goat Meat & Pounded Yam', price: 7500, category: 'Dinner' },
+      { name: 'Spicy Peppered Asun Yam Platter', price: 6800, category: 'Dinner' }
+    ],
+    reminderStatus: 'Active',
+    reminderCount: 3,
+    lastReminderSentAt: 'Yesterday, 5:45 PM',
+    createdAt: new Date().toISOString()
+  }
+];
 
 const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
@@ -282,6 +344,8 @@ function App() {
   const [backendOnline, setBackendOnline] = useState(false);
   const [openFoodMenuId, setOpenFoodMenuId] = useState<number | null>(null);
   const [reminderDispatchTime, setReminderDispatchTime] = useState('17:00');
+  const [selectedMealCategory, setSelectedMealCategory] = useState<'All' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Dessert & Snacks'>('All');
+  const [reminderOccasionInModal, setReminderOccasionInModal] = useState<'Breakfast' | 'Lunch' | 'Dinner' | 'Dessert & Snacks'>('Dinner');
 
   // Reminders Multi-Select State
   const [selectedReminderIds, setSelectedReminderIds] = useState<string[]>([]);
@@ -495,7 +559,7 @@ function App() {
       .then(savedData => {
         if (Array.isArray(savedData)) {
           setBackendOnline(true);
-          setSavedCustomers(savedData);
+          if (savedData.length > 0) setSavedCustomers(savedData);
         }
       })
       .catch(() => {});
@@ -1115,13 +1179,41 @@ function App() {
     );
   };
 
+  // Occasion helpers & tailored reminder messages
+  const getTimeCategory = (timeStr: string): 'Breakfast' | 'Lunch' | 'Dessert & Snacks' | 'Dinner' => {
+    const [h] = timeStr.split(':').map(Number);
+    if (h < 11) return 'Breakfast';
+    if (h < 14) return 'Lunch';
+    if (h < 16) return 'Dessert & Snacks';
+    return 'Dinner';
+  };
+
+  const getOccasionMessage = (name: string, dishes: string, occasion: string) => {
+    switch (occasion) {
+      case 'Breakfast':
+        return `Good morning ${name}! 🌅 Greetings from Chef Margaret at Ma’Great Taste. You saved: "${dishes}". Our breakfast kitchen is live right now! Ready for a hot morning meal delivered to you in 25–35 minutes? Reply to order now!`;
+      case 'Lunch':
+        return `Hello ${name}! ☀️ Greetings from Chef Margaret at Ma’Great Taste. Lunchtime is here! You saved: "${dishes}". Pots are piping hot for fast midday delivery. Reply to order your lunch!`;
+      case 'Dessert & Snacks':
+        return `Hi ${name}! 🍰 Craving something sweet or a savory treat? You saved: "${dishes}" from our bakery & treats selection. Freshly prepped and ready for dispatch. Reply to order!`;
+      case 'Dinner':
+      default:
+        return `Good evening ${name}! 🍲 Greetings from Chef Margaret at Ma’Great Taste. You recently saved: "${dishes}". Our chef is firing up the evening pots right now. Ready for fresh dinner delivered in 25–35 minutes? Reply to order!`;
+    }
+  };
+
   // Single reminder dispatch
-  const dispatchSingleReminder = async (cust: SavedMealCustomer) => {
+  const dispatchSingleReminder = async (cust: SavedMealCustomer, occasion?: string) => {
+    const activeOccasion = occasion || cust.mealType || getTimeCategory(reminderDispatchTime);
     try {
-      await fetch(`${API_BASE}/saved-meals/${cust.id}/remind`, { method: 'POST' });
-      notify(`Dinner reminder sent to ${cust.customerName}!`);
+      await fetch(`${API_BASE}/saved-meals/${cust.id}/remind`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ occasion: activeOccasion })
+      });
+      notify(`${activeOccasion} reminder sent to ${cust.customerName}!`);
     } catch {
-      notify(`Dinner reminder queued for ${cust.customerName}.`);
+      notify(`${activeOccasion} reminder queued for ${cust.customerName}.`);
     }
     // Update local count
     setSavedCustomers(prev =>
@@ -1134,24 +1226,25 @@ function App() {
     setReminderPreviewTarget(null);
   };
 
-  // Bulk reminder dispatch (e.g. 10 selected customers)
+  // Bulk reminder dispatch (e.g. selected customers)
   const dispatchBulkReminders = async () => {
     if (selectedReminderIds.length === 0) return;
     setIsBulkSending(true);
     const count = selectedReminderIds.length;
+    const activeOccasion = selectedMealCategory !== 'All' ? selectedMealCategory : getTimeCategory(reminderDispatchTime);
     try {
       const res = await fetch(`${API_BASE}/saved-meals/bulk-remind`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedReminderIds })
+        body: JSON.stringify({ ids: selectedReminderIds, occasion: activeOccasion })
       });
       if (res.ok) {
-        notify(`🚀 Successfully dispatched dinner reminders to ${count} selected customers!`);
+        notify(`🚀 Successfully dispatched ${activeOccasion} reminders to ${count} selected customers!`);
       } else {
         throw new Error();
       }
     } catch {
-      notify(`🚀 Dispatched dinner reminders to ${count} selected customers!`);
+      notify(`🚀 Dispatched ${activeOccasion} reminders to ${count} selected customers!`);
     }
 
     setSavedCustomers(prev =>
@@ -1182,14 +1275,13 @@ function App() {
   };
 
   // WhatsApp Reminder
-  const sendWhatsAppSavedReminder = (cust: SavedMealCustomer) => {
+  const sendWhatsAppSavedReminder = (cust: SavedMealCustomer, occasion?: string) => {
     const cleanPhone = (cust.customerPhone || '08034567890').replace(/[^0-9]/g, '');
     const intl = cleanPhone.startsWith('0') ? '234' + cleanPhone.slice(1) : cleanPhone;
     const dishes = cust.items.map(i => i.name).join(', ');
-    const text = encodeURIComponent(
-      `Hello ${cust.customerName}! 🍲 Greetings from Chef Margaret at Ma’Great Taste. You recently saved: "${dishes}". We are firing up the pots for dinner right now! Ready to treat yourself this evening? Reply to order for 25-minute fast delivery.`
-    );
-    window.open(`https://wa.me/${intl}?text=${text}`, '_blank');
+    const activeOccasion = occasion || cust.mealType || getTimeCategory(reminderDispatchTime);
+    const msg = getOccasionMessage(cust.customerName, dishes, activeOccasion);
+    window.open(`https://wa.me/${intl}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   // ==========================================
@@ -1539,7 +1631,7 @@ function App() {
                 {section === 'Catering & events' && 'Catering & Events'}
                 {section === 'Meal plans' && 'Meal Plans & Subscriptions'}
                 {section === 'Messages' && 'Customer Messages'}
-                {section === 'Saved meals & reminders' && 'Saved Meals & Automated Dinner Reminders'}
+                {section === 'Saved meals & reminders' && 'Saved Meals & Automated Meal Reminders'}
                 {section === 'Analytics' && 'Business Analytics'}
                 {section === 'Customers' && 'Customers Directory & Discounts'}
                 {section === 'Settings' && 'Store Settings'}
@@ -1550,7 +1642,7 @@ function App() {
                 {section === 'Menu management' && 'Add dishes, update pricing, upload dish photos, and manage availability.'}
                 {section === 'Catering & events' && 'Manage high-value catering leads, corporate bookings, send quotes, and discuss menus.'}
                 {section === 'Meal plans' && 'Create and edit meal prep packages and freezer stocking subscriptions.'}
-                {section === 'Saved meals & reminders' && 'Dispatch manual bulk reminders to selected customers, or let the 5:00 PM automated dinner engine run.'}
+                {section === 'Saved meals & reminders' && 'Dispatch manual bulk reminders to selected customers, or configure automated alerts for Breakfast, Lunch, Dinner, or Desserts.'}
                 {section === 'Customers' && 'Manage individual VIPs, corporate companies, assign discounts and vouchers.'}
               </p>
             </div>
@@ -2306,7 +2398,7 @@ function App() {
           )}
 
           {/* ========================================================= */}
-          {/* 6. SAVED MEALS & DINNER REMINDERS (MULTI-SELECT & AUTO) */}
+          {/* 6. SAVED MEALS & AUTOMATED MEAL REMINDERS */}
           {/* ========================================================= */}
           {section === 'Saved meals & reminders' && (
             <section className="panel content-panel">
@@ -2318,11 +2410,11 @@ function App() {
                   </div>
                   <div>
                     <strong style={{ fontSize: 13, color: 'var(--brand-navy)', display: 'block' }}>
-                      How Customer Saved Meals & Dinner Reminders Function
+                      How Customer Saved Meals & Automated Reminders Function
                     </strong>
                     <p style={{ fontSize: 11, color: '#485e70', margin: '4px 0 0', lineHeight: 1.6 }}>
                       When visitors tap the heart icon on any meal on your website, it is saved to their profile.
-                      At your configured daily dispatch time, our automated system prompts them with their favorite meals to order dinner before kitchen cutoff.
+                      At your configured meal dispatch time, our automated engine prompts them with their favorite dishes to order breakfast, lunch, dinner, or dessert treats before cutoff.
                     </p>
                   </div>
                 </div>
@@ -2332,12 +2424,34 @@ function App() {
                   <div className="reminders-guide-step">
                     <span className="step-number">STEP 1</span>
                     <h4>Customer Bookmarks Meal</h4>
-                    <p>Shoppers on the website tap the heart on meals they love (e.g. Egusi, Jollof, Asun) to save them to their dinner favorites.</p>
+                    <p>Shoppers on the website tap the heart on meals they love across Breakfast, Lunch, Dinner, Pastries, or Desserts.</p>
                   </div>
                   <div className="reminders-guide-step">
                     <span className="step-number">STEP 2</span>
-                    <h4>Dinner Alert ({reminderDispatchTime === '17:00' ? '5:00 PM' : reminderDispatchTime})</h4>
-                    <p>At your configured time, our engine sends an alert reminding them to order dinner before kitchen cutoff.</p>
+                    <h4>
+                      {getTimeCategory(reminderDispatchTime)} Alert (
+                      {reminderDispatchTime === '07:30' ? '7:30 AM' :
+                       reminderDispatchTime === '08:00' ? '8:00 AM' :
+                       reminderDispatchTime === '08:30' ? '8:30 AM' :
+                       reminderDispatchTime === '09:00' ? '9:00 AM' :
+                       reminderDispatchTime === '11:00' ? '11:00 AM' :
+                       reminderDispatchTime === '11:30' ? '11:30 AM' :
+                       reminderDispatchTime === '12:00' ? '12:00 PM' :
+                       reminderDispatchTime === '12:30' ? '12:30 PM' :
+                       reminderDispatchTime === '13:00' ? '1:00 PM' :
+                       reminderDispatchTime === '14:30' ? '2:30 PM' :
+                       reminderDispatchTime === '15:00' ? '3:00 PM' :
+                       reminderDispatchTime === '15:30' ? '3:30 PM' :
+                       reminderDispatchTime === '16:00' ? '4:00 PM' :
+                       reminderDispatchTime === '16:30' ? '4:30 PM' :
+                       reminderDispatchTime === '17:00' ? '5:00 PM' :
+                       reminderDispatchTime === '17:30' ? '5:30 PM' :
+                       reminderDispatchTime === '18:00' ? '6:00 PM' :
+                       reminderDispatchTime === '19:00' ? '7:00 PM' : reminderDispatchTime})
+                    </h4>
+                    <p>
+                      At your scheduled time, the auto engine dispatches tailored alerts for {getTimeCategory(reminderDispatchTime).toLowerCase()} favorites before kitchen cutoff.
+                    </p>
                   </div>
                   <div className="reminders-guide-step">
                     <span className="step-number">STEP 3</span>
@@ -2345,6 +2459,70 @@ function App() {
                     <p>The notification loads their exact saved dishes right into the shopping bag for instant reordering.</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Meal Occasion Filter Bar */}
+              <div style={{ display: 'flex', gap: 8, margin: '16px 0 12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-navy)', textTransform: 'uppercase' }}>
+                  Filter by Meal Time:
+                </span>
+                {(['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert & Snacks'] as const).map(cat => {
+                  const icons: Record<string, string> = {
+                    'All': '🍽️',
+                    'Breakfast': '🌅',
+                    'Lunch': '☀️',
+                    'Dinner': '🌙',
+                    'Dessert & Snacks': '🍰'
+                  };
+                  const count = cat === 'All'
+                    ? savedCustomers.length
+                    : savedCustomers.filter(c => {
+                        if (c.mealType === cat) return true;
+                        return c.items.some(i => {
+                          const text = `${i.name} ${i.category || ''}`.toLowerCase();
+                          if (cat === 'Breakfast') return text.includes('breakfast') || text.includes('waakye') || text.includes('egg') || text.includes('plantain');
+                          if (cat === 'Lunch') return text.includes('jollof') || text.includes('rice') || text.includes('lunch') || text.includes('noodles');
+                          if (cat === 'Dessert & Snacks') return text.includes('puff') || text.includes('pie') || text.includes('cake') || text.includes('pastry') || text.includes('sweet') || text.includes('snack');
+                          if (cat === 'Dinner') return text.includes('soup') || text.includes('swallow') || text.includes('egusi') || text.includes('asun') || text.includes('dinner');
+                          return false;
+                        });
+                      }).length;
+
+                  return (
+                    <button
+                      key={cat}
+                      className={`filter-chip ${selectedMealCategory === cat ? 'active' : ''}`}
+                      onClick={() => setSelectedMealCategory(cat)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '6px 14px',
+                        borderRadius: 20,
+                        border: selectedMealCategory === cat ? '1px solid var(--brand-red)' : '1px solid #e2e8f0',
+                        background: selectedMealCategory === cat ? 'var(--brand-red)' : '#ffffff',
+                        color: selectedMealCategory === cat ? '#ffffff' : 'var(--brand-navy)',
+                        fontWeight: 600,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <span>{icons[cat]}</span>
+                      <span>{cat === 'All' ? 'All Saved Meals' : cat}</span>
+                      <span style={{
+                        fontSize: 10,
+                        background: selectedMealCategory === cat ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                        color: selectedMealCategory === cat ? '#ffffff' : '#64748b',
+                        padding: '1px 6px',
+                        borderRadius: 10,
+                        marginLeft: 2
+                      }}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Bulk Actions & Schedule Toolbar */}
@@ -2372,7 +2550,7 @@ function App() {
                       <Send size={14} />
                       {isBulkSending
                         ? 'Sending...'
-                        : `Dispatch Reminders to ${selectedReminderIds.length} Selected`}
+                        : `Dispatch ${selectedMealCategory !== 'All' ? selectedMealCategory : getTimeCategory(reminderDispatchTime)} Reminders to ${selectedReminderIds.length} Selected`}
                     </button>
                   )}
                 </div>
@@ -2384,17 +2562,39 @@ function App() {
                     <select
                       value={reminderDispatchTime}
                       onChange={(e) => {
-                        setReminderDispatchTime(e.target.value);
-                        notify(`Dinner reminder dispatch time set to ${e.target.options[e.target.selectedIndex].text}!`);
+                        const newTime = e.target.value;
+                        setReminderDispatchTime(newTime);
+                        const cat = getTimeCategory(newTime);
+                        notify(`Meal reminder set to ${e.target.options[e.target.selectedIndex].text} (${cat} alert)!`);
                       }}
                       className="dispatch-time-select"
                     >
-                      <option value="16:00">4:00 PM (Early Dinner Prep)</option>
-                      <option value="16:30">4:30 PM (Pre-Rush Alert)</option>
-                      <option value="17:00">5:00 PM (Standard Evening)</option>
-                      <option value="17:30">5:30 PM (Peak Commute Alert)</option>
-                      <option value="18:00">6:00 PM (Late Dinner Orders)</option>
-                      <option value="19:00">7:00 PM (Night Shift Orders)</option>
+                      <optgroup label="🌅 Breakfast Alerts (Morning)">
+                        <option value="07:30">7:30 AM (Early Breakfast Rush)</option>
+                        <option value="08:00">8:00 AM (Standard Breakfast Alert)</option>
+                        <option value="08:30">8:30 AM (Workday Morning Kickstart)</option>
+                        <option value="09:00">9:00 AM (Late Breakfast &amp; Brunch)</option>
+                      </optgroup>
+                      <optgroup label="☀️ Lunch Alerts (Midday)">
+                        <option value="11:00">11:00 AM (Corporate Lunch Prep)</option>
+                        <option value="11:30">11:30 AM (Pre-Midday Lunch Alert)</option>
+                        <option value="12:00">12:00 PM (Standard Noon Lunch)</option>
+                        <option value="12:30">12:30 PM (Peak Lunch Dispatch)</option>
+                        <option value="13:00">1:00 PM (Late Lunch Break)</option>
+                      </optgroup>
+                      <optgroup label="🍰 Dessert, Pastries &amp; Afternoon Snacks">
+                        <option value="14:30">2:30 PM (Afternoon Pastry Craving)</option>
+                        <option value="15:00">3:00 PM (Tea, Pastries &amp; Small Chops)</option>
+                        <option value="15:30">3:30 PM (Dessert &amp; Sweet Treats)</option>
+                      </optgroup>
+                      <optgroup label="🌙 Dinner &amp; Evening Alerts">
+                        <option value="16:00">4:00 PM (Early Dinner Prep)</option>
+                        <option value="16:30">4:30 PM (Pre-Commute Dinner Alert)</option>
+                        <option value="17:00">5:00 PM (Standard Evening Dinner)</option>
+                        <option value="17:30">5:30 PM (Peak Commute Alert)</option>
+                        <option value="18:00">6:00 PM (Family Dinner Orders)</option>
+                        <option value="19:00">7:00 PM (Late Dinner &amp; Nightshift)</option>
+                      </optgroup>
                     </select>
                   </div>
 
@@ -2405,7 +2605,7 @@ function App() {
                       className={`schedule-toggle-pill ${autoScheduleActive ? 'active' : ''}`}
                       onClick={() => {
                         setAutoScheduleActive(!autoScheduleActive);
-                        notify(`Automated dinner reminders ${!autoScheduleActive ? 'activated' : 'paused'}.`);
+                        notify(`Automated meal reminders ${!autoScheduleActive ? 'activated' : 'paused'}.`);
                       }}
                     >
                       {autoScheduleActive ? 'Active' : 'Paused'}
@@ -2420,9 +2620,18 @@ function App() {
                   <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
                     <Heart size={42} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-red)' }} />
                     <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No customer saved dishes yet</h3>
-                    <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
-                      When visitors bookmark or save their favorite meals on the frontend, their preferences will appear here for dinner reminders.
+                    <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto 16px' }}>
+                      When visitors bookmark or save their favorite meals on the frontend, their preferences will appear here for breakfast, lunch, dinner, and dessert reminders.
                     </p>
+                    <button
+                      className="primary-btn"
+                      onClick={() => {
+                        setSavedCustomers(initialSavedCustomers);
+                        notify('Loaded sample customer bookmarks for Breakfast, Lunch, Dinner & Dessert!');
+                      }}
+                    >
+                      + Load Demo Customer Saved Meals
+                    </button>
                   </div>
                 ) : (
                   <table>
@@ -2430,80 +2639,125 @@ function App() {
                       <tr>
                         <th style={{ width: 40 }}>SELECT</th>
                         <th>CUSTOMER</th>
-                        <th>EMAIL & PHONE</th>
-                        <th>SAVED MEALS</th>
+                        <th>EMAIL &amp; PHONE</th>
+                        <th>MEAL OCCASION</th>
+                        <th>SAVED DISHES</th>
                         <th>REMINDER STATUS</th>
                         <th>SENT COUNT</th>
                         <th>DISPATCH REMINDER</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {savedCustomers.map(c => {
-                        const isSelected = selectedReminderIds.includes(c.id);
-                        return (
-                          <tr key={c.id} className={isSelected ? 'selected-row' : ''}>
-                            <td>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleSelectReminder(c.id)}
-                                style={{ width: 16, height: 16, cursor: 'pointer' }}
-                              />
-                            </td>
-                            <td>
-                              <strong>{c.customerName}</strong>
-                              <small className="subline">Saved {c.items.length} dish(es)</small>
-                            </td>
-                            <td>
-                              <span>{c.customerEmail}</span>
-                              <small className="subline">{c.customerPhone || '0800 000 0000'}</small>
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxWidth: 300 }}>
-                                {c.items.map((m, idx) => (
-                                  <span key={idx} className="saved-dish-tag">
-                                    🍲 {m.name}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td>
-                              <button
-                                className={`status-clickable ${c.reminderStatus === 'Active' ? 'status-green' : 'status-amber'}`}
-                                onClick={() => toggleReminderStatus(c)}
-                                title="Click to toggle Active / Paused"
-                              >
-                                {c.reminderStatus || 'Active'}
-                              </button>
-                            </td>
-                            <td>
-                              <b>{c.reminderCount || 0} times</b>
-                              {c.lastReminderSentAt && (
-                                <small className="subline">Last: {c.lastReminderSentAt}</small>
-                              )}
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: 6 }}>
+                      {savedCustomers
+                        .filter(c => {
+                          if (selectedMealCategory === 'All') return true;
+                          if (c.mealType === selectedMealCategory) return true;
+                          return c.items.some(i => {
+                            const text = `${i.name} ${i.category || ''}`.toLowerCase();
+                            if (selectedMealCategory === 'Breakfast') return text.includes('breakfast') || text.includes('waakye') || text.includes('egg') || text.includes('plantain');
+                            if (selectedMealCategory === 'Lunch') return text.includes('jollof') || text.includes('rice') || text.includes('lunch') || text.includes('noodles');
+                            if (selectedMealCategory === 'Dessert & Snacks') return text.includes('puff') || text.includes('pie') || text.includes('cake') || text.includes('pastry') || text.includes('sweet') || text.includes('snack');
+                            if (selectedMealCategory === 'Dinner') return text.includes('soup') || text.includes('swallow') || text.includes('egusi') || text.includes('asun') || text.includes('dinner');
+                            return false;
+                          });
+                        })
+                        .map(c => {
+                          const isSelected = selectedReminderIds.includes(c.id);
+                          const inferredType = c.mealType || (
+                            c.items.some(i => i.name.toLowerCase().includes('waakye') || i.name.toLowerCase().includes('breakfast')) ? 'Breakfast' :
+                            c.items.some(i => i.name.toLowerCase().includes('jollof') || i.name.toLowerCase().includes('rice')) ? 'Lunch' :
+                            c.items.some(i => i.name.toLowerCase().includes('puff') || i.name.toLowerCase().includes('pie')) ? 'Dessert & Snacks' : 'Dinner'
+                          );
+
+                          return (
+                            <tr key={c.id} className={isSelected ? 'selected-row' : ''}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelectReminder(c.id)}
+                                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                                />
+                              </td>
+                              <td>
+                                <strong>{c.customerName}</strong>
+                                <small className="subline">Saved {c.items.length} dish(es)</small>
+                              </td>
+                              <td>
+                                <span>{c.customerEmail}</span>
+                                <small className="subline">{c.customerPhone || '0800 000 0000'}</small>
+                              </td>
+                              <td>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: '3px 8px',
+                                  borderRadius: 12,
+                                  background: inferredType === 'Breakfast' ? '#fef3c7' :
+                                              inferredType === 'Lunch' ? '#e0f2fe' :
+                                              inferredType === 'Dessert & Snacks' ? '#fce7f3' : '#f3e8ff',
+                                  color: inferredType === 'Breakfast' ? '#92400e' :
+                                         inferredType === 'Lunch' ? '#0369a1' :
+                                         inferredType === 'Dessert & Snacks' ? '#be185d' : '#6b21a8'
+                                }}>
+                                  {inferredType === 'Breakfast' && '🌅 Breakfast'}
+                                  {inferredType === 'Lunch' && '☀️ Lunch'}
+                                  {inferredType === 'Dessert & Snacks' && '🍰 Dessert'}
+                                  {inferredType === 'Dinner' && '🌙 Dinner'}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxWidth: 300 }}>
+                                  {c.items.map((m, idx) => (
+                                    <span key={idx} className="saved-dish-tag">
+                                      🍲 {m.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td>
                                 <button
-                                  className="primary-btn"
-                                  style={{ padding: '6px 11px', fontSize: 10 }}
-                                  onClick={() => setReminderPreviewTarget(c)}
+                                  className={`status-clickable ${c.reminderStatus === 'Active' ? 'status-green' : 'status-amber'}`}
+                                  onClick={() => toggleReminderStatus(c)}
+                                  title="Click to toggle Active / Paused"
                                 >
-                                  <Mail size={12} /> Send Now
+                                  {c.reminderStatus || 'Active'}
                                 </button>
-                                <button
-                                  className="whatsapp-action-btn"
-                                  style={{ padding: '6px 9px', fontSize: 10 }}
-                                  onClick={() => sendWhatsAppSavedReminder(c)}
-                                  title="Send reminder directly on WhatsApp"
-                                >
-                                  <MessageCircle size={13} /> WhatsApp
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+                              <td>
+                                <b>{c.reminderCount || 0} times</b>
+                                {c.lastReminderSentAt && (
+                                  <small className="subline">Last: {c.lastReminderSentAt}</small>
+                                )}
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <button
+                                    className="primary-btn"
+                                    style={{ padding: '6px 11px', fontSize: 10 }}
+                                    onClick={() => {
+                                      setReminderOccasionInModal(inferredType as any);
+                                      setReminderPreviewTarget(c);
+                                    }}
+                                  >
+                                    <Mail size={12} /> Send Now
+                                  </button>
+                                  <button
+                                    className="whatsapp-action-btn"
+                                    style={{ padding: '6px 9px', fontSize: 10 }}
+                                    onClick={() => sendWhatsAppSavedReminder(c, inferredType)}
+                                    title="Send reminder directly on WhatsApp"
+                                  >
+                                    <MessageCircle size={13} /> WhatsApp
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 )}
@@ -3042,7 +3296,7 @@ function App() {
                 <span className="modal-icon">
                   <Mail size={19} />
                 </span>
-                <h2>Dispatch Dinner Reminder</h2>
+                <h2>Dispatch {reminderOccasionInModal} Reminder</h2>
                 <p>Sending personalized message to <b>{reminderPreviewTarget.customerName}</b> ({reminderPreviewTarget.customerEmail}).</p>
               </div>
               <button className="icon-btn" onClick={() => setReminderPreviewTarget(null)}>
@@ -3050,12 +3304,44 @@ function App() {
               </button>
             </div>
 
+            <div style={{ margin: '14px 0 10px' }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-navy)', display: 'block', marginBottom: 6 }}>
+                SELECT REMINDER OCCASION / MEAL TIME:
+              </label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {(['Breakfast', 'Lunch', 'Dinner', 'Dessert & Snacks'] as const).map(occ => (
+                  <button
+                    key={occ}
+                    type="button"
+                    onClick={() => setReminderOccasionInModal(occ)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: reminderOccasionInModal === occ ? '1px solid var(--brand-red)' : '1px solid #cbd5e1',
+                      background: reminderOccasionInModal === occ ? '#fef2f2' : '#ffffff',
+                      color: reminderOccasionInModal === occ ? 'var(--brand-red)' : 'var(--brand-navy)'
+                    }}
+                  >
+                    {occ === 'Breakfast' && '🌅 Breakfast'}
+                    {occ === 'Lunch' && '☀️ Lunch'}
+                    {occ === 'Dinner' && '🌙 Dinner'}
+                    {occ === 'Dessert & Snacks' && '🍰 Dessert & Snacks'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="receipt-box" style={{ background: '#fcfbfa', borderColor: 'var(--brand-gold-subtle)' }}>
-              <strong style={{ color: 'var(--brand-navy)' }}>Message Content Preview:</strong>
-              <p style={{ fontStyle: 'italic', color: '#384b5c', marginTop: 8, lineHeight: 1.6 }}>
-                "Dear {reminderPreviewTarget.customerName}, you recently bookmarked{' '}
-                <b>{reminderPreviewTarget.items.map(i => i.name).join(', ')}</b> at Ma’Great Taste.
-                Our chef is firing up the evening pots right now. Ready for fresh hot food delivered to your door in 25–35 minutes? Order now!"
+              <strong style={{ color: 'var(--brand-navy)', display: 'block', marginBottom: 6 }}>Message Content Preview:</strong>
+              <p style={{ fontStyle: 'italic', color: '#384b5c', margin: 0, lineHeight: 1.6 }}>
+                "{getOccasionMessage(
+                  reminderPreviewTarget.customerName,
+                  reminderPreviewTarget.items.map(i => i.name).join(', '),
+                  reminderOccasionInModal
+                )}"
               </p>
             </div>
 
@@ -3064,10 +3350,20 @@ function App() {
                 Cancel
               </button>
               <button
-                className="primary-btn"
-                onClick={() => dispatchSingleReminder(reminderPreviewTarget)}
+                className="secondary-btn"
+                style={{ background: '#25D366', color: '#ffffff', borderColor: '#25D366' }}
+                onClick={() => {
+                  sendWhatsAppSavedReminder(reminderPreviewTarget, reminderOccasionInModal);
+                  setReminderPreviewTarget(null);
+                }}
               >
-                <Send size={15} /> Confirm & Dispatch Now
+                <MessageCircle size={14} /> Send via WhatsApp
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => dispatchSingleReminder(reminderPreviewTarget, reminderOccasionInModal)}
+              >
+                <Send size={15} /> Confirm &amp; Dispatch Email
               </button>
             </div>
           </div>
