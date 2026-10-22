@@ -3239,19 +3239,34 @@ function App() {
             <div>
               {/* Top Bar with Mailtrap SMTP Connection Status */}
               <div className="newsletter-top-strip">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <span className={`smtp-badge ${smtpStatus?.success ? 'online' : 'offline'}`}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: smtpStatus?.success ? '#10b981' : '#ef4444' }} />
-                    {smtpStatus?.success ? 'Mailtrap Live SMTP Active' : (smtpStatus?.message || 'SMTP Status Pending')}
+                <div className="smtp-status-group">
+                  <span className={`smtp-badge ${isCheckingSmtp ? 'pending' : (smtpStatus?.success ? 'online' : (smtpStatus ? 'offline' : 'pending'))}`}>
+                    <span
+                      className="smtp-dot-pulse"
+                      style={{
+                        background: isCheckingSmtp ? '#f59e0b' : (smtpStatus?.success ? '#10b981' : (smtpStatus ? '#ef4444' : '#64748b'))
+                      }}
+                    />
+                    {isCheckingSmtp
+                      ? 'Verifying Mailtrap SMTP...'
+                      : smtpStatus?.success
+                      ? 'Mailtrap Live SMTP Active'
+                      : (smtpStatus?.message || 'SMTP Ready (Mailtrap Live)')}
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                    Host: <strong>live.smtp.mailtrap.io:587</strong> • Sender: <strong>hello@magreattaste.ng</strong>
+
+                  <span className="newsletter-meta-chip">
+                    Host: <strong>live.smtp.mailtrap.io</strong> ({smtpStatus?.port || '587/2525'})
+                  </span>
+
+                  <span className="newsletter-meta-chip">
+                    Sender: <strong>hello@magreattaste.ng</strong>
                   </span>
                 </div>
+
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
                     className="secondary-btn"
-                    style={{ fontSize: 12, padding: '7px 14px' }}
+                    style={{ fontSize: 11, padding: '7px 14px' }}
                     onClick={checkSmtpStatus}
                     disabled={isCheckingSmtp}
                   >
@@ -3259,7 +3274,7 @@ function App() {
                   </button>
                   <button
                     className="secondary-btn"
-                    style={{ fontSize: 12, padding: '7px 14px' }}
+                    style={{ fontSize: 11, padding: '7px 14px' }}
                     onClick={handleExportSubscribersCsv}
                   >
                     <Download size={13} /> Export CSV ({subscribers.length})
@@ -3267,44 +3282,64 @@ function App() {
                 </div>
               </div>
 
-              {/* KPI Stat Cards */}
+              {/* KPI Stat Cards (Refined to match dashboard design system) */}
               <div className="stat-grid" style={{ marginBottom: 24 }}>
                 <div className="stat-card">
-                  <div className="stat-head">
-                    <span>Active Subscribers</span>
-                    <Mail size={18} color="var(--brand-navy)" />
+                  <div className="stat-top">
+                    <div className="stat-icon blue">
+                      <Mail size={18} />
+                    </div>
+                    <span className="stat-change up">Active</span>
                   </div>
-                  <div className="stat-value">{subscribers.length}</div>
-                  <div className="stat-sub">Website newsletter readers</div>
+                  <p>Website Subscribers</p>
+                  <strong className="stat-value">{subscribers.length}</strong>
+                  <div className="stat-bottom">
+                    <small>Opted-in newsletter readers</small>
+                  </div>
                 </div>
 
                 <div className="stat-card">
-                  <div className="stat-head">
-                    <span>Campaigns Sent</span>
-                    <Send size={18} color="var(--brand-red)" />
+                  <div className="stat-top">
+                    <div className="stat-icon orange">
+                      <Send size={18} />
+                    </div>
+                    <span className="stat-change neutral">Broadcasts</span>
                   </div>
-                  <div className="stat-value">{campaigns.length}</div>
-                  <div className="stat-sub">Dispatched announcements</div>
+                  <p>Campaigns Dispatched</p>
+                  <strong className="stat-value">{campaigns.length}</strong>
+                  <div className="stat-bottom">
+                    <small>{campaigns.length > 0 ? 'Sent to subscribers' : 'No prior campaigns'}</small>
+                  </div>
                 </div>
 
                 <div className="stat-card">
-                  <div className="stat-head">
-                    <span>Total Emails Delivered</span>
-                    <PackageCheck size={18} color="#059669" />
+                  <div className="stat-top">
+                    <div className="stat-icon green">
+                      <PackageCheck size={18} />
+                    </div>
+                    <span className="stat-change up">Delivered</span>
                   </div>
-                  <div className="stat-value">
+                  <p>Total Emails Sent</p>
+                  <strong className="stat-value">
                     {campaigns.reduce((acc, c) => acc + (c.recipientCount || 0), 0)}
+                  </strong>
+                  <div className="stat-bottom">
+                    <small>Across all customer broadcasts</small>
                   </div>
-                  <div className="stat-sub">Across all broadcasts</div>
                 </div>
 
                 <div className="stat-card">
-                  <div className="stat-head">
-                    <span>Delivery Channel</span>
-                    <ShieldCheck size={18} color="var(--brand-blue)" />
+                  <div className="stat-top">
+                    <div className="stat-icon purple">
+                      <ShieldCheck size={18} />
+                    </div>
+                    <span className="stat-change up">Encrypted</span>
                   </div>
-                  <div className="stat-value" style={{ fontSize: 20 }}>Mailtrap</div>
-                  <div className="stat-sub">TLS Encrypted Port 587</div>
+                  <p>Delivery Infrastructure</p>
+                  <strong className="stat-value" style={{ fontSize: 20 }}>Mailtrap Live</strong>
+                  <div className="stat-bottom">
+                    <small>Dedicated cloud SMTP relay</small>
+                  </div>
                 </div>
               </div>
 

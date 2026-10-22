@@ -2595,29 +2595,80 @@ tbody tr:hover {
   gap: 16px;
   background: var(--surface);
   border: 1px solid var(--line);
-  padding: 16px 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  margin-bottom: 22px;
+  box-shadow: 0 2px 10px rgba(24, 40, 56, 0.03);
+  transition: all 0.2s ease;
+}
+
+.smtp-status-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .smtp-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   padding: 6px 14px;
   border-radius: 20px;
+  letter-spacing: 0.2px;
+  transition: all 0.2s ease;
 }
+
 .smtp-badge.online {
   background: #ecfdf5;
-  color: #065f46;
+  color: #047857;
   border: 1px solid #a7f3d0;
 }
+
 .smtp-badge.offline {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.smtp-badge.pending {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.smtp-dot-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulseDot 1.8s infinite;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.newsletter-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.newsletter-meta-chip strong {
+  color: var(--brand-navy);
+  font-weight: 700;
 }
 
 .newsletter-grid {
