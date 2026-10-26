@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -412,18 +412,32 @@ function App() {
   const [smtpStatus, setSmtpStatus] = useState<{ success: boolean; message: string; host?: string; port?: number; user?: string } | null>(null);
   const [isCheckingSmtp, setIsCheckingSmtp] = useState(false);
 
+  const savedLocalSettings = (() => {
+    try {
+      const raw = localStorage.getItem('magreat_store_settings');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
   // Settings States (Real-time backend synchronization)
-  const [settingsBusinessName, setSettingsBusinessName] = useState("Ma'Great Taste Restaurant & Catering Services");
-  const [settingsAddress, setSettingsAddress] = useState('Lekki Phase 1, Lagos, Nigeria');
-  const [settingsPhone, setSettingsPhone] = useState('+234 803 456 7890');
-  const [settingsEmail, setSettingsEmail] = useState('orders@magreattaste.ng');
-  const [settingsOnlineOrdering, setSettingsOnlineOrdering] = useState(true);
-  const [settingsWhatsappAlerts, setSettingsWhatsappAlerts] = useState(true);
-  const [settingsCorporateDiscounts, setSettingsCorporateDiscounts] = useState(true);
-  const [settingsMinOrder, setSettingsMinOrder] = useState('3000');
-  const [settingsDeliveryFee, setSettingsDeliveryFee] = useState('2000');
-  const [settingsOpeningHours, setSettingsOpeningHours] = useState('8:00 AM – 10:00 PM Daily');
+  const [settingsBusinessName, setSettingsBusinessName] = useState(savedLocalSettings?.businessName || "Ma'Great Taste Restaurant & Catering Services");
+  const [settingsAddress, setSettingsAddress] = useState(savedLocalSettings?.kitchenAddress || 'Lekki Phase 1, Lagos, Nigeria');
+  const [settingsPhone, setSettingsPhone] = useState(savedLocalSettings?.phone || '+234 9059271973');
+  const [settingsEmail, setSettingsEmail] = useState(savedLocalSettings?.email || 'orders@magreattaste.ng');
+  const [settingsOnlineOrdering, setSettingsOnlineOrdering] = useState(savedLocalSettings?.onlineOrdering !== undefined ? savedLocalSettings.onlineOrdering : true);
+  const [settingsWhatsappAlerts, setSettingsWhatsappAlerts] = useState(savedLocalSettings?.whatsappAlerts !== undefined ? savedLocalSettings.whatsappAlerts : true);
+  const [settingsCorporateDiscounts, setSettingsCorporateDiscounts] = useState(savedLocalSettings?.corporateDiscounts !== undefined ? savedLocalSettings.corporateDiscounts : true);
+  const [settingsMinOrder, setSettingsMinOrder] = useState(String(savedLocalSettings?.minOrderAmount || '3000'));
+  const [settingsDeliveryFee, setSettingsDeliveryFee] = useState(String(savedLocalSettings?.deliveryFee || '2000'));
+  const [settingsOpeningHours, setSettingsOpeningHours] = useState(savedLocalSettings?.openingHours || '8:00 AM – 10:00 PM Daily');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  const sectionRef = useRef(section);
+  useEffect(() => {
+    sectionRef.current = section;
+  }, [section]);
 
   const notify = (s: string) => {
     setToast(s);
@@ -609,18 +623,22 @@ function App() {
     adminFetch(`${API_BASE}/settings`)
       .then(r => r.json())
       .then(s => {
-        if (s && s.businessName) {
+        const data = s?.settings || s;
+        if (data && data.businessName) {
           setBackendOnline(true);
-          setSettingsBusinessName(s.businessName);
-          if (s.kitchenAddress) setSettingsAddress(s.kitchenAddress);
-          if (s.phone) setSettingsPhone(s.phone);
-          if (s.email) setSettingsEmail(s.email);
-          if (s.onlineOrdering !== undefined) setSettingsOnlineOrdering(s.onlineOrdering);
-          if (s.whatsappAlerts !== undefined) setSettingsWhatsappAlerts(s.whatsappAlerts);
-          if (s.corporateDiscounts !== undefined) setSettingsCorporateDiscounts(s.corporateDiscounts);
-          if (s.minOrderAmount !== undefined) setSettingsMinOrder(String(s.minOrderAmount));
-          if (s.deliveryFee !== undefined) setSettingsDeliveryFee(String(s.deliveryFee));
-          if (s.openingHours) setSettingsOpeningHours(s.openingHours);
+          // Only overwrite form inputs if admin is not actively editing in Settings section
+          if (sectionRef.current !== 'Settings') {
+            setSettingsBusinessName(data.businessName);
+            if (data.kitchenAddress) setSettingsAddress(data.kitchenAddress);
+            if (data.phone) setSettingsPhone(data.phone);
+            if (data.email) setSettingsEmail(data.email);
+            if (data.onlineOrdering !== undefined) setSettingsOnlineOrdering(data.onlineOrdering);
+            if (data.whatsappAlerts !== undefined) setSettingsWhatsappAlerts(data.whatsappAlerts);
+            if (data.corporateDiscounts !== undefined) setSettingsCorporateDiscounts(data.corporateDiscounts);
+            if (data.minOrderAmount !== undefined) setSettingsMinOrder(String(data.minOrderAmount));
+            if (data.deliveryFee !== undefined) setSettingsDeliveryFee(String(data.deliveryFee));
+            if (data.openingHours) setSettingsOpeningHours(data.openingHours);
+          }
         }
       })
       .catch(() => {});
@@ -848,18 +866,24 @@ function App() {
     };
 
     try {
+      localStorage.setItem('magreat_store_settings', JSON.stringify(payload));
+    } catch {}
+
+    try {
       const res = await adminFetch(`${API_BASE}/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      const data = await res.json().catch(() => null);
       if (res.ok) {
         notify('✅ Store settings saved live in real time to backend!');
       } else {
-        throw new Error();
+        const msg = data?.error || data?.message || `HTTP ${res.status}`;
+        notify(`⚠️ Settings saved locally on browser (${msg})`);
       }
     } catch {
-      notify('Settings saved locally.');
+      notify('Settings saved locally on browser.');
     } finally {
       setIsSavingSettings(false);
     }
