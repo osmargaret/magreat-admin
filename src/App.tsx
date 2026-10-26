@@ -393,6 +393,7 @@ function App() {
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   // Newsletter Studio & Email Broadcast States
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
@@ -3226,13 +3227,51 @@ function App() {
                         <MessageCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
                         Reply to {selectedMessage.name}
                       </strong>
+
+                      {selectedMessage.reply && (
+                        <div style={{ background: '#f8fafc', borderLeft: '3px solid #182838', padding: '10px 14px', borderRadius: 6, margin: '10px 0', fontSize: 12 }}>
+                          <strong style={{ display: 'block', color: '#182838', marginBottom: 2 }}>Sent Portal Reply:</strong>
+                          <p style={{ margin: 0, color: '#334155', lineHeight: 1.5 }}>{selectedMessage.reply}</p>
+                          <small style={{ color: '#94a3b8', fontSize: 10 }}>Delivered to customer dashboard</small>
+                        </div>
+                      )}
+
                       <textarea
                         className="message-reply-textarea"
                         value={replyText}
                         onChange={e => setReplyText(e.target.value)}
-                        placeholder="Type your response message here..."
+                        placeholder="Type response for customer dining dashboard or WhatsApp..."
                       />
                       <div className="message-reply-actions">
+                        <button
+                          className="primary-btn"
+                          disabled={isSendingReply || !replyText.trim()}
+                          onClick={async () => {
+                            setIsSendingReply(true);
+                            try {
+                              const res = await adminFetch(`${API_BASE}/messages/${selectedMessage.id}/reply`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reply: replyText.trim() })
+                              });
+                              if (res.ok) {
+                                notify('✅ Reply delivered live to customer dashboard!');
+                                const sentText = replyText.trim();
+                                setReplyText('');
+                                setMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, reply: sentText, repliedAt: new Date().toISOString() } : m));
+                                setSelectedMessage((prev: any) => prev ? { ...prev, reply: sentText, repliedAt: new Date().toISOString() } : null);
+                              } else {
+                                throw new Error();
+                              }
+                            } catch {
+                              notify('⚠️ Could not send reply to customer dashboard.');
+                            } finally {
+                              setIsSendingReply(false);
+                            }
+                          }}
+                        >
+                          <Send size={13} /> {isSendingReply ? 'Sending...' : 'Send to Customer Portal'}
+                        </button>
                         <button
                           className="secondary-btn"
                           onClick={() => {
