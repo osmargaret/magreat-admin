@@ -55,7 +55,10 @@ import {
   EyeOff,
   LogOut,
   UserPlus,
-  ShieldAlert
+  ShieldAlert,
+  Table as TableIcon,
+  LayoutGrid,
+  MapPin
 } from 'lucide-react';
 import { defaultFoods } from './data/menuData';
 
@@ -343,6 +346,48 @@ const initialCustomers: CustomerRecord[] = [];
 const initialCateringLeads: CateringLead[] = [];
 const initialSavedCustomers: SavedMealCustomer[] = [];
 
+const initialAcademyLeads: AcademyLead[] = [
+  {
+    id: 'acad-001',
+    refNumber: 'MGA-849201',
+    fullName: 'Blessing Adebayo',
+    email: 'blessing.adebayo@gmail.com',
+    phone: '08123456789',
+    journey: '6-months',
+    schedule: 'weekend-executive',
+    experience: 'Beginner',
+    notes: 'Aspiring to launch my own private catering brand in Lekki after completing the diploma.',
+    status: 'Pending Review',
+    appliedAt: new Date(Date.now() - 86400000 * 1.5).toISOString()
+  },
+  {
+    id: 'acad-002',
+    refNumber: 'MGA-518290',
+    fullName: 'Emmanuel Okafor',
+    email: 'emmanuel.okafor@yahoo.com',
+    phone: '08098765432',
+    journey: '3-months',
+    schedule: 'weekday-intensive',
+    experience: 'Intermediate',
+    notes: 'Looking to master continental sauces, pastry presentation, and knife speed skills.',
+    status: 'Contacted',
+    appliedAt: new Date(Date.now() - 86400000 * 3).toISOString()
+  },
+  {
+    id: 'acad-003',
+    refNumber: 'MGA-930128',
+    fullName: 'Amina Bello',
+    email: 'amina.bello@gmail.com',
+    phone: '09012348765',
+    journey: '9-months',
+    schedule: 'weekend-executive',
+    experience: 'Professional',
+    notes: 'Restaurant owner seeking executive mastery in modern African fusion and kitchen operations.',
+    status: 'Admitted',
+    appliedAt: new Date(Date.now() - 86400000 * 6).toISOString()
+  }
+];
+
 const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
   { label: 'Orders', icon: ShoppingBag, group: 'WORKSPACE' },
@@ -368,9 +413,12 @@ function App() {
   const [customers, setCustomers] = useState<CustomerRecord[]>(initialCustomers);
   const [cateringLeads, setCateringLeads] = useState<CateringLead[]>(initialCateringLeads);
   const [savedCustomers, setSavedCustomers] = useState<SavedMealCustomer[]>(initialSavedCustomers);
-  const [academyLeads, setAcademyLeads] = useState<AcademyLead[]>([]);
+  const [academyLeads, setAcademyLeads] = useState<AcademyLead[]>(initialAcademyLeads);
   const [academyJourneyFilter, setAcademyJourneyFilter] = useState('All');
   const [academyStatusFilter, setAcademyStatusFilter] = useState('All');
+  const [academySearch, setAcademySearch] = useState('');
+  const [academyViewMode, setAcademyViewMode] = useState<'table' | 'cards'>('table');
+  const [selectedAcademyDrawer, setSelectedAcademyDrawer] = useState<AcademyLead | null>(null);
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -393,6 +441,9 @@ function App() {
   const [quoteAmount, setQuoteAmount] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
   const [selectedCateringDrawer, setSelectedCateringDrawer] = useState<CateringLead | null>(null);
+  const [cateringSearch, setCateringSearch] = useState('');
+  const [cateringStatusFilter, setCateringStatusFilter] = useState<'All' | CateringLead['status']>('All');
+  const [cateringViewMode, setCateringViewMode] = useState<'table' | 'cards'>('table');
 
   // Modals & Drawers state
   const [showAddFood, setShowAddFood] = useState(false);
@@ -886,7 +937,7 @@ function App() {
     adminFetch(`${API_BASE}/academy/applications`)
       .then(r => r.json())
       .then(d => {
-        if (Array.isArray(d)) {
+        if (Array.isArray(d) && d.length > 0) {
           setAcademyLeads(d);
         }
       })
@@ -2997,96 +3048,352 @@ function App() {
           )}
 
           {/* ========================================================= */}
-          {/* 4. CATERING & EVENTS (FULL QUOTATIONS, WHATSAPP, DRAWER) */}
+          {/* 4. CATERING & EVENTS (LUXURY DATA TABLE, STATS & FILTERS) */}
           {/* ========================================================= */}
-          {section === 'Catering & events' && (
-            <section className="panel content-panel">
-              <div className="toolbar">
-                <div>
-                  <h3>High-Volume Catering Leads & Quotes</h3>
-                  <p className="muted">Direct requests for wedding buffets, corporate retreats, and party banquets.</p>
+          {section === 'Catering & events' && (() => {
+            const pendingCount = cateringLeads.filter(c => c.status === 'Pending').length;
+            const quoteSentCount = cateringLeads.filter(c => c.status === 'Quote sent').length;
+            const confirmedCount = cateringLeads.filter(c => c.status === 'Confirmed').length;
+            const declinedCount = cateringLeads.filter(c => c.status === 'Declined').length;
+
+            const filteredLeads = cateringLeads.filter(c => {
+              const query = cateringSearch.trim().toLowerCase();
+              const matchesSearch =
+                !query ||
+                (c.eventType + ' ' + c.customerName + ' ' + c.location + ' ' + c.customerPhone + ' ' + (c.customerEmail || '') + ' ' + (c.budget || ''))
+                  .toLowerCase()
+                  .includes(query);
+              const matchesStatus = cateringStatusFilter === 'All' || c.status === cateringStatusFilter;
+              return matchesSearch && matchesStatus;
+            });
+
+            return (
+              <section className="panel content-panel">
+                {/* Header Toolbar */}
+                <div className="toolbar" style={{ marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                      <CalendarDays size={20} color="var(--brand-red)" /> High-Volume Catering Leads & Quotes
+                    </h3>
+                    <p className="muted" style={{ margin: '4px 0 0' }}>
+                      Direct pipeline for wedding banquets, corporate retreats, VIP dining & party catering.
+                    </p>
+                  </div>
+                  <button className="secondary-btn" onClick={loadBackendData} title="Fetch latest submissions from live server">
+                    <Filter size={14} /> Refresh leads
+                  </button>
                 </div>
-                <button className="secondary-btn" onClick={loadBackendData}>
-                  <Filter size={15} /> Refresh leads
-                </button>
-              </div>
 
-              {cateringLeads.length === 0 ? (
-                <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
-                  <CalendarDays size={42} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
-                  <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No catering enquiries yet</h3>
-                  <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
-                    Party bookings, corporate lunches, and wedding catering enquiries submitted through the website form will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="event-cards">
-                  {cateringLeads.map((c, idx) => (
-                    <div className="event-card-rich" key={c.id || idx}>
-                      <div className="event-card-rich-header">
-                        <div className="event-emoji">🍲</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0 }}>{c.eventType}</h3>
-                            <select
-                              className={`status-select status-${c.status === 'Confirmed' ? 'delivered' : c.status === 'Quote sent' ? 'ready' : 'new'}`}
-                              value={c.status}
-                              onChange={e => updateCateringStatusDirect(c.id, e.target.value as CateringLead['status'])}
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="Quote sent">Quote sent</option>
-                              <option value="Confirmed">Confirmed</option>
-                              <option value="Declined">Declined</option>
-                            </select>
-                          </div>
-                          <strong style={{ display: 'block', fontSize: 13, color: 'var(--brand-navy)', marginTop: 4 }}>
-                            {c.customerName}
-                          </strong>
-                        </div>
-                      </div>
-
-                      <div className="catering-meta-grid">
-                        <div>
-                          <small>GUESTS & LOCATION</small>
-                          <span>{c.guestCount} guests · {c.location}</span>
-                        </div>
-                        <div>
-                          <small>EVENT DATE</small>
-                          <span style={{ fontWeight: 700, color: 'var(--brand-red)' }}>{c.eventDate}</span>
-                        </div>
-                        <div>
-                          <small>BUDGET ESTIMATE</small>
-                          <span>{c.budget || 'Negotiable'}</span>
-                        </div>
-                        <div>
-                          <small>CONTACT PHONE</small>
-                          <span>{c.customerPhone}</span>
-                        </div>
-                      </div>
-
-                      {c.dietaryRequirements && (
-                        <div className="catering-dietary-strip">
-                          <b>Dietary Note:</b> {c.dietaryRequirements}
-                        </div>
-                      )}
-
-                      <div className="event-actions-bar">
-                        <button className="primary-btn" onClick={() => openQuoteModal(c)}>
-                          <DollarSign size={14} /> Send Quotation
-                        </button>
-                        <button className="whatsapp-action-btn" onClick={() => sendWhatsAppCatering(c)}>
-                          <MessageCircle size={14} /> Chat on WhatsApp
-                        </button>
-                        <button className="secondary-btn" onClick={() => setSelectedCateringDrawer(c)}>
-                          <FileText size={14} /> Details
-                        </button>
-                      </div>
+                {/* Top KPI Metrics Row */}
+                <div className="catering-kpi-bar">
+                  <div className="catering-kpi-card">
+                    <div className="catering-kpi-icon navy">🍲</div>
+                    <div className="catering-kpi-info">
+                      <h4>Total Enquiries</h4>
+                      <strong>{cateringLeads.length}</strong>
                     </div>
-                  ))}
+                  </div>
+                  <div className="catering-kpi-card" onClick={() => setCateringStatusFilter('Pending')} style={{ cursor: 'pointer' }}>
+                    <div className="catering-kpi-icon amber">⏳</div>
+                    <div className="catering-kpi-info">
+                      <h4>Pending Review</h4>
+                      <strong style={{ color: '#b45309' }}>{pendingCount}</strong>
+                    </div>
+                  </div>
+                  <div className="catering-kpi-card" onClick={() => setCateringStatusFilter('Quote sent')} style={{ cursor: 'pointer' }}>
+                    <div className="catering-kpi-icon blue">📄</div>
+                    <div className="catering-kpi-info">
+                      <h4>Quotes Dispatched</h4>
+                      <strong style={{ color: '#1d4ed8' }}>{quoteSentCount}</strong>
+                    </div>
+                  </div>
+                  <div className="catering-kpi-card" onClick={() => setCateringStatusFilter('Confirmed')} style={{ cursor: 'pointer' }}>
+                    <div className="catering-kpi-icon green">✅</div>
+                    <div className="catering-kpi-info">
+                      <h4>Confirmed Banquets</h4>
+                      <strong style={{ color: '#047857' }}>{confirmedCount}</strong>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </section>
-          )}
+
+                {/* Controls & Filter Bar */}
+                <div className="catering-controls-bar">
+                  {/* Status Filter Pills */}
+                  <div className="catering-filter-pills">
+                    <button
+                      className={`catering-filter-pill ${cateringStatusFilter === 'All' ? 'active' : ''}`}
+                      onClick={() => setCateringStatusFilter('All')}
+                    >
+                      All Leads <span className="catering-filter-count">{cateringLeads.length}</span>
+                    </button>
+                    <button
+                      className={`catering-filter-pill ${cateringStatusFilter === 'Pending' ? 'active' : ''}`}
+                      onClick={() => setCateringStatusFilter('Pending')}
+                    >
+                      Pending <span className="catering-filter-count">{pendingCount}</span>
+                    </button>
+                    <button
+                      className={`catering-filter-pill ${cateringStatusFilter === 'Quote sent' ? 'active' : ''}`}
+                      onClick={() => setCateringStatusFilter('Quote sent')}
+                    >
+                      Quote sent <span className="catering-filter-count">{quoteSentCount}</span>
+                    </button>
+                    <button
+                      className={`catering-filter-pill ${cateringStatusFilter === 'Confirmed' ? 'active' : ''}`}
+                      onClick={() => setCateringStatusFilter('Confirmed')}
+                    >
+                      Confirmed <span className="catering-filter-count">{confirmedCount}</span>
+                    </button>
+                    {declinedCount > 0 && (
+                      <button
+                        className={`catering-filter-pill ${cateringStatusFilter === 'Declined' ? 'active' : ''}`}
+                        onClick={() => setCateringStatusFilter('Declined')}
+                      >
+                        Declined <span className="catering-filter-count">{declinedCount}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Search and View Toggle */}
+                  <div className="catering-search-and-view">
+                    <div className="catering-search-input-wrap">
+                      <Search size={14} />
+                      <input
+                        type="text"
+                        className="catering-search-input"
+                        placeholder="Search client, venue, phone..."
+                        value={cateringSearch}
+                        onChange={e => setCateringSearch(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="catering-view-toggle">
+                      <button
+                        className={`catering-view-btn ${cateringViewMode === 'table' ? 'active' : ''}`}
+                        onClick={() => setCateringViewMode('table')}
+                        title="Nice Table View"
+                      >
+                        <TableIcon size={14} /> Table
+                      </button>
+                      <button
+                        className={`catering-view-btn ${cateringViewMode === 'cards' ? 'active' : ''}`}
+                        onClick={() => setCateringViewMode('cards')}
+                        title="Cards Grid View"
+                      >
+                        <LayoutGrid size={14} /> Cards
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Rendering: Empty State vs Table vs Cards */}
+                {filteredLeads.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <CalendarDays size={42} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
+                    <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>
+                      {cateringLeads.length === 0 ? 'No catering enquiries yet' : 'No matching catering leads found'}
+                    </h3>
+                    <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
+                      {cateringLeads.length === 0
+                        ? 'Party bookings, corporate lunches, and wedding catering enquiries submitted through the website form will appear here.'
+                        : 'Try adjusting your search query or status filter to see other enquiries.'}
+                    </p>
+                  </div>
+                ) : cateringViewMode === 'table' ? (
+                  /* ========================================================= */
+                  /* FINE & NICE DATA TABLE */
+                  /* ========================================================= */
+                  <div className="catering-table-card">
+                    <div className="catering-table-container">
+                      <table className="catering-table">
+                        <thead>
+                          <tr>
+                            <th>EVENT & CLIENT</th>
+                            <th>GUESTS & VENUE</th>
+                            <th>EVENT DATE</th>
+                            <th>BUDGET ESTIMATE</th>
+                            <th>CONTACT DETAILS</th>
+                            <th>STATUS</th>
+                            <th style={{ textAlign: 'right', paddingRight: 20 }}>ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredLeads.map((c, idx) => (
+                            <tr key={c.id || idx}>
+                              {/* Event & Client */}
+                              <td>
+                                <div className="catering-cell-event">
+                                  <div className="catering-cell-avatar">🍲</div>
+                                  <div>
+                                    <span className="catering-cell-event-title">{c.eventType}</span>
+                                    <span className="catering-cell-client">
+                                      <strong>{c.customerName}</strong>
+                                    </span>
+                                    {c.dietaryRequirements && (
+                                      <span className="catering-badge-dietary" title={c.dietaryRequirements}>
+                                        🌱 Note: {c.dietaryRequirements}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Guests & Venue */}
+                              <td>
+                                <div>
+                                  <span className="catering-pill-guest">
+                                    <Users size={12} /> {c.guestCount} guests
+                                  </span>
+                                  <div className="catering-venue-line">
+                                    <MapPin size={12} color="#64748b" /> {c.location}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Event Date */}
+                              <td>
+                                <span className="catering-date-badge">
+                                  <CalendarDays size={13} /> {c.eventDate}
+                                </span>
+                              </td>
+
+                              {/* Budget */}
+                              <td>
+                                <span className="catering-budget-pill">{c.budget || 'To be discussed'}</span>
+                              </td>
+
+                              {/* Contact Details */}
+                              <td>
+                                <div className="catering-contact-line">
+                                  <a href={`tel:${c.customerPhone}`} className="catering-phone-link">
+                                    <Phone size={12} color="#182838" /> {c.customerPhone}
+                                  </a>
+                                  {c.customerEmail && (
+                                    <span className="catering-email-sub" title={c.customerEmail}>
+                                      {c.customerEmail}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Status Dropdown */}
+                              <td>
+                                <select
+                                  className={`catering-status-select status-${c.status.toLowerCase().replace(' ', '-')}`}
+                                  value={c.status}
+                                  onChange={e => updateCateringStatusDirect(c.id, e.target.value as CateringLead['status'])}
+                                >
+                                  <option value="Pending">Pending</option>
+                                  <option value="Quote sent">Quote sent</option>
+                                  <option value="Confirmed">Confirmed</option>
+                                  <option value="Declined">Declined</option>
+                                </select>
+                              </td>
+
+                              {/* Actions */}
+                              <td>
+                                <div className="catering-actions-cell" style={{ justifyContent: 'flex-end', paddingRight: 6 }}>
+                                  <button
+                                    className="catering-quote-action-btn"
+                                    onClick={() => openQuoteModal(c)}
+                                    title="Draft & send official quotation"
+                                  >
+                                    <DollarSign size={13} /> Send Quotation
+                                  </button>
+                                  <button
+                                    className="catering-whatsapp-icon-btn"
+                                    onClick={() => sendWhatsAppCatering(c)}
+                                    title={`Chat with ${c.customerName} on WhatsApp`}
+                                  >
+                                    <MessageCircle size={15} />
+                                  </button>
+                                  <button
+                                    className="catering-details-pill-btn"
+                                    onClick={() => setSelectedCateringDrawer(c)}
+                                    title="View full booking dossier"
+                                  >
+                                    <FileText size={13} /> Details
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  /* ========================================================= */
+                  /* OPTIONAL CARDS GRID VIEW */
+                  /* ========================================================= */
+                  <div className="event-cards">
+                    {filteredLeads.map((c, idx) => (
+                      <div className="event-card-rich" key={c.id || idx}>
+                        <div className="event-card-rich-header">
+                          <div className="event-emoji">🍲</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <h3 style={{ margin: 0 }}>{c.eventType}</h3>
+                              <select
+                                className={`status-select status-${c.status === 'Confirmed' ? 'delivered' : c.status === 'Quote sent' ? 'ready' : 'new'}`}
+                                value={c.status}
+                                onChange={e => updateCateringStatusDirect(c.id, e.target.value as CateringLead['status'])}
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Quote sent">Quote sent</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Declined">Declined</option>
+                              </select>
+                            </div>
+                            <strong style={{ display: 'block', fontSize: 13, color: 'var(--brand-navy)', marginTop: 4 }}>
+                              {c.customerName}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <div className="catering-meta-grid">
+                          <div>
+                            <small>GUESTS & LOCATION</small>
+                            <span>{c.guestCount} guests · {c.location}</span>
+                          </div>
+                          <div>
+                            <small>EVENT DATE</small>
+                            <span style={{ fontWeight: 700, color: 'var(--brand-red)' }}>{c.eventDate}</span>
+                          </div>
+                          <div>
+                            <small>BUDGET ESTIMATE</small>
+                            <span>{c.budget || 'Negotiable'}</span>
+                          </div>
+                          <div>
+                            <small>CONTACT PHONE</small>
+                            <span>{c.customerPhone}</span>
+                          </div>
+                        </div>
+
+                        {c.dietaryRequirements && (
+                          <div className="catering-dietary-strip">
+                            <b>Dietary Note:</b> {c.dietaryRequirements}
+                          </div>
+                        )}
+
+                        <div className="event-actions-bar">
+                          <button className="primary-btn" onClick={() => openQuoteModal(c)}>
+                            <DollarSign size={14} /> Send Quotation
+                          </button>
+                          <button className="whatsapp-action-btn" onClick={() => sendWhatsAppCatering(c)}>
+                            <MessageCircle size={14} /> Chat on WhatsApp
+                          </button>
+                          <button className="secondary-btn" onClick={() => setSelectedCateringDrawer(c)}>
+                            <FileText size={14} /> Details
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })()}
 
           {/* ========================================================= */}
           {/* 5. MEAL PLANS & FREEZER SUBSCRIPTIONS (FULLY EDITABLE) */}
@@ -3653,123 +3960,354 @@ function App() {
           )}
 
           {/* ========================================================= */}
-          {/* CULINARY ARTS ACADEMY MANAGEMENT */}
+          {/* CULINARY ARTS ACADEMY (FINE TABLE & EASY-TO-UNDERSTAND CARDS) */}
           {/* ========================================================= */}
-          {section === 'Culinary school' && (
-            <section className="panel content-panel">
-              <div className="toolbar">
-                <div>
-                  <h3>Student Applications &amp; Admissions</h3>
-                  <p className="muted">Track applicants across the 3 Training Journeys, manage admissions, and connect on WhatsApp.</p>
-                </div>
-                <button className="secondary-btn" onClick={loadBackendData}>
-                  <Filter size={15} /> Refresh applications
-                </button>
-              </div>
+          {section === 'Culinary school' && (() => {
+            const countFoundation = academyLeads.filter(a => a.journey === '3-months').length;
+            const countDiploma = academyLeads.filter(a => a.journey === '6-months').length;
+            const countExecutive = academyLeads.filter(a => a.journey === '9-months').length;
 
-              {/* Academy Key Metric Cards */}
-              <div className="stats-row" style={{ marginTop: 8, marginBottom: 20 }}>
-                <div className="stat-card">
-                  <div className="stat-label">TOTAL APPLICANTS</div>
-                  <div className="stat-value">{academyLeads.length}</div>
-                  <small style={{ color: '#687c88' }}>Across all cohorts</small>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">3 MONTHS (FOUNDATION)</div>
-                  <div className="stat-value" style={{ color: '#0284c7' }}>
-                    {academyLeads.filter(a => a.journey === '3-months').length}
+            const pendingReviewCount = academyLeads.filter(a => a.status === 'Pending Review').length;
+            const contactedCount = academyLeads.filter(a => a.status === 'Contacted').length;
+            const admittedCount = academyLeads.filter(a => a.status === 'Admitted').length;
+            const enrolledCount = academyLeads.filter(a => a.status === 'Enrolled').length;
+            const cancelledCount = academyLeads.filter(a => a.status === 'Cancelled').length;
+
+            const filteredCandidates = academyLeads.filter(a => {
+              const query = (academySearch || search).trim().toLowerCase();
+              const matchSearch =
+                !query ||
+                a.fullName.toLowerCase().includes(query) ||
+                a.phone.includes(query) ||
+                (a.refNumber && a.refNumber.toLowerCase().includes(query)) ||
+                (a.email && a.email.toLowerCase().includes(query));
+              const matchJourney = academyJourneyFilter === 'All' || a.journey === academyJourneyFilter;
+              const matchStatus = academyStatusFilter === 'All' || a.status === academyStatusFilter;
+              return matchSearch && matchJourney && matchStatus;
+            });
+
+            return (
+              <section className="panel content-panel">
+                {/* Header Toolbar */}
+                <div className="toolbar" style={{ marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                      <GraduationCap size={20} color="var(--brand-red)" /> Student Applications &amp; Admissions
+                    </h3>
+                    <p className="muted" style={{ margin: '4px 0 0' }}>
+                      Track candidate registrations across Foundation, Pro Diploma, and Executive Masterclass cohorts.
+                    </p>
                   </div>
-                  <small style={{ color: '#687c88' }}>₦280k Tuition</small>
+                  <button className="secondary-btn" onClick={loadBackendData} title="Fetch latest applications from server">
+                    <Filter size={14} /> Refresh applications
+                  </button>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-label">6 MONTHS (PRO DIPLOMA) ★</div>
-                  <div className="stat-value" style={{ color: 'var(--brand-red)' }}>
-                    {academyLeads.filter(a => a.journey === '6-months').length}
+
+                {/* 1. EASY-TO-UNDERSTAND KPI CARDS (4 COLUMNS GRID) */}
+                <div className="academy-kpi-grid">
+                  {/* Card 1: Total */}
+                  <div
+                    className={`academy-kpi-card ${academyJourneyFilter === 'All' ? 'active' : ''}`}
+                    onClick={() => setAcademyJourneyFilter('All')}
+                    title="Click to view all applicants"
+                  >
+                    <div className="academy-kpi-icon all">🎓</div>
+                    <div className="academy-kpi-info">
+                      <h4>TOTAL CANDIDATES</h4>
+                      <strong>{academyLeads.length}</strong>
+                      <span className="academy-kpi-tag all">Across all 3 cohorts</span>
+                    </div>
                   </div>
-                  <small style={{ color: '#b45309', fontWeight: 700 }}>Most Popular · ₦490k</small>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">9 MONTHS (EXECUTIVE)</div>
-                  <div className="stat-value" style={{ color: '#d97706' }}>
-                    {academyLeads.filter(a => a.journey === '9-months').length}
+
+                  {/* Card 2: 3 Months Foundation */}
+                  <div
+                    className={`academy-kpi-card ${academyJourneyFilter === '3-months' ? 'active' : ''}`}
+                    onClick={() => setAcademyJourneyFilter('3-months')}
+                    title="Click to filter by 3 Months Foundation"
+                  >
+                    <div className="academy-kpi-icon foundation">🔪</div>
+                    <div className="academy-kpi-info">
+                      <h4>3 MOS (FOUNDATION)</h4>
+                      <strong style={{ color: '#0284c7' }}>{countFoundation}</strong>
+                      <span className="academy-kpi-tag foundation">₦280k Tuition</span>
+                    </div>
                   </div>
-                  <small style={{ color: '#687c88' }}>₦750k Masterclass</small>
+
+                  {/* Card 3: 6 Months Pro Diploma */}
+                  <div
+                    className={`academy-kpi-card ${academyJourneyFilter === '6-months' ? 'active' : ''}`}
+                    onClick={() => setAcademyJourneyFilter('6-months')}
+                    title="Click to filter by 6 Months Pro Diploma"
+                  >
+                    <div className="academy-kpi-icon diploma">⭐</div>
+                    <div className="academy-kpi-info">
+                      <h4>6 MOS (PRO DIPLOMA) ★</h4>
+                      <strong style={{ color: 'var(--brand-red)' }}>{countDiploma}</strong>
+                      <span className="academy-kpi-tag diploma">★ Most Popular · ₦490k</span>
+                    </div>
+                  </div>
+
+                  {/* Card 4: 9 Months Executive */}
+                  <div
+                    className={`academy-kpi-card ${academyJourneyFilter === '9-months' ? 'active' : ''}`}
+                    onClick={() => setAcademyJourneyFilter('9-months')}
+                    title="Click to filter by 9 Months Executive Master"
+                  >
+                    <div className="academy-kpi-icon executive">👑</div>
+                    <div className="academy-kpi-info">
+                      <h4>9 MOS (EXECUTIVE)</h4>
+                      <strong style={{ color: '#d97706' }}>{countExecutive}</strong>
+                      <span className="academy-kpi-tag executive">₦750k Masterclass</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Filters Bar */}
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 }}>
-                <div style={{ position: 'relative', flex: '1', minWidth: 200 }}>
-                  <Search size={15} style={{ position: 'absolute', left: 10, top: 10, color: '#94a3b8' }} />
-                  <input
-                    type="text"
-                    placeholder="Search candidate by name, phone, or Ref code..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    style={{ paddingLeft: 32, width: '100%', boxSizing: 'border-box' }}
-                  />
+                {/* 2. FILTER & CONTROLS STRIP */}
+                <div className="academy-controls-bar">
+                  {/* Status Filter Pills */}
+                  <div className="academy-filter-pills">
+                    <button
+                      className={`academy-filter-pill ${academyStatusFilter === 'All' ? 'active' : ''}`}
+                      onClick={() => setAcademyStatusFilter('All')}
+                    >
+                      All <span className="academy-filter-count">{academyLeads.length}</span>
+                    </button>
+                    <button
+                      className={`academy-filter-pill ${academyStatusFilter === 'Pending Review' ? 'active' : ''}`}
+                      onClick={() => setAcademyStatusFilter('Pending Review')}
+                    >
+                      Pending <span className="academy-filter-count">{pendingReviewCount}</span>
+                    </button>
+                    <button
+                      className={`academy-filter-pill ${academyStatusFilter === 'Contacted' ? 'active' : ''}`}
+                      onClick={() => setAcademyStatusFilter('Contacted')}
+                    >
+                      Contacted <span className="academy-filter-count">{contactedCount}</span>
+                    </button>
+                    <button
+                      className={`academy-filter-pill ${academyStatusFilter === 'Admitted' ? 'active' : ''}`}
+                      onClick={() => setAcademyStatusFilter('Admitted')}
+                    >
+                      Admitted <span className="academy-filter-count">{admittedCount}</span>
+                    </button>
+                    <button
+                      className={`academy-filter-pill ${academyStatusFilter === 'Enrolled' ? 'active' : ''}`}
+                      onClick={() => setAcademyStatusFilter('Enrolled')}
+                    >
+                      Enrolled <span className="academy-filter-count">{enrolledCount}</span>
+                    </button>
+                    {cancelledCount > 0 && (
+                      <button
+                        className={`academy-filter-pill ${academyStatusFilter === 'Cancelled' ? 'active' : ''}`}
+                        onClick={() => setAcademyStatusFilter('Cancelled')}
+                      >
+                        Cancelled <span className="academy-filter-count">{cancelledCount}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Search, Journey Select & View Toggle */}
+                  <div className="academy-search-select-wrap">
+                    <div className="academy-search-input-wrap">
+                      <Search size={14} />
+                      <input
+                        type="text"
+                        className="academy-search-input"
+                        placeholder="Search candidate name, phone, Ref..."
+                        value={academySearch}
+                        onChange={e => setAcademySearch(e.target.value)}
+                      />
+                    </div>
+
+                    <select
+                      className="academy-journey-select"
+                      value={academyJourneyFilter}
+                      onChange={e => setAcademyJourneyFilter(e.target.value)}
+                    >
+                      <option value="All">All Training Journeys</option>
+                      <option value="3-months">3 Months (Foundation)</option>
+                      <option value="6-months">6 Months (Pro Diploma)</option>
+                      <option value="9-months">9 Months (Executive)</option>
+                    </select>
+
+                    <div className="catering-view-toggle">
+                      <button
+                        className={`catering-view-btn ${academyViewMode === 'table' ? 'active' : ''}`}
+                        onClick={() => setAcademyViewMode('table')}
+                        title="Fine Table View"
+                      >
+                        <TableIcon size={14} /> Table
+                      </button>
+                      <button
+                        className={`catering-view-btn ${academyViewMode === 'cards' ? 'active' : ''}`}
+                        onClick={() => setAcademyViewMode('cards')}
+                        title="Cards View"
+                      >
+                        <LayoutGrid size={14} /> Cards
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <select
-                  value={academyJourneyFilter}
-                  onChange={e => setAcademyJourneyFilter(e.target.value)}
-                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13 }}
-                >
-                  <option value="All">All Training Journeys</option>
-                  <option value="3-months">3 Months (Foundation)</option>
-                  <option value="6-months">6 Months (Pro Diploma)</option>
-                  <option value="9-months">9 Months (Executive Master)</option>
-                </select>
+                {/* 3. APPLICANTS RENDERING: EMPTY STATE vs FINE TABLE vs CARDS */}
+                {filteredCandidates.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <GraduationCap size={44} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
+                    <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>
+                      {academyLeads.length === 0 ? 'No academy applicants found' : 'No candidates match your search or filter'}
+                    </h3>
+                    <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
+                      {academyLeads.length === 0
+                        ? 'Student enrollment applications submitted on the website form will appear here in real-time.'
+                        : 'Try adjusting your search keywords or journey filter to locate other candidate records.'}
+                    </p>
+                  </div>
+                ) : academyViewMode === 'table' ? (
+                  /* ========================================================= */
+                  /* FINE & NICE DATA TABLE FOR CULINARY ACADEMY */
+                  /* ========================================================= */
+                  <div className="academy-table-card">
+                    <div className="academy-table-container">
+                      <table className="academy-table">
+                        <thead>
+                          <tr>
+                            <th>CANDIDATE &amp; REF</th>
+                            <th>PROGRAMME &amp; TUITION</th>
+                            <th>SCHEDULE &amp; LEVEL</th>
+                            <th>CONTACT DETAILS</th>
+                            <th>ADMISSIONS STATUS</th>
+                            <th style={{ textAlign: 'right', paddingRight: 20 }}>ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredCandidates.map(a => {
+                            const phoneClean = a.phone.replace(/[^0-9]/g, '');
+                            const isDiploma = a.journey === '6-months';
+                            const isExecutive = a.journey === '9-months';
+                            const journeyClass = isDiploma ? 'diploma' : isExecutive ? 'executive' : 'foundation';
+                            const journeyTitle = isDiploma
+                              ? '6 Months Pro Diploma ★'
+                              : isExecutive
+                              ? '9 Months Executive Master'
+                              : '3 Months Foundation';
+                            const tuitionText = isDiploma ? '₦490,000' : isExecutive ? '₦750,000' : '₦280,000';
 
-                <select
-                  value={academyStatusFilter}
-                  onChange={e => setAcademyStatusFilter(e.target.value)}
-                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13 }}
-                >
-                  <option value="All">All Admissions Statuses</option>
-                  <option value="Pending Review">Pending Review</option>
-                  <option value="Contacted">Contacted</option>
-                  <option value="Admitted">Admitted</option>
-                  <option value="Enrolled">Enrolled</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
+                            const waMsg = encodeURIComponent(
+                              `Hello ${a.fullName}! This is Chef Margaret & the Admissions Team at Ma'Great Culinary Arts Academy. We received your registration (${a.refNumber}) for the ${journeyTitle} (${tuitionText}). We're excited to guide your admission into our upcoming cohort!`
+                            );
 
-              {/* Applicants List */}
-              {academyLeads
-                .filter(a => {
-                  const matchSearch =
-                    !search.trim() ||
-                    a.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                    a.phone.includes(search) ||
-                    (a.refNumber && a.refNumber.toLowerCase().includes(search.toLowerCase())) ||
-                    (a.email && a.email.toLowerCase().includes(search.toLowerCase()));
-                  const matchJourney = academyJourneyFilter === 'All' || a.journey === academyJourneyFilter;
-                  const matchStatus = academyStatusFilter === 'All' || a.status === academyStatusFilter;
-                  return matchSearch && matchJourney && matchStatus;
-                }).length === 0 ? (
-                <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
-                  <GraduationCap size={44} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
-                  <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No academy applicants found</h3>
-                  <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
-                    Student enrollment applications submitted on the website form will appear here in real-time.
-                  </p>
-                </div>
-              ) : (
-                <div className="event-cards">
-                  {academyLeads
-                    .filter(a => {
-                      const matchSearch =
-                        !search.trim() ||
-                        a.fullName.toLowerCase().includes(search.toLowerCase()) ||
-                        a.phone.includes(search) ||
-                        (a.refNumber && a.refNumber.toLowerCase().includes(search.toLowerCase())) ||
-                        (a.email && a.email.toLowerCase().includes(search.toLowerCase()));
-                      const matchJourney = academyJourneyFilter === 'All' || a.journey === academyJourneyFilter;
-                      const matchStatus = academyStatusFilter === 'All' || a.status === academyStatusFilter;
-                      return matchSearch && matchJourney && matchStatus;
-                    })
-                    .map(a => {
+                            const initials = (a.fullName || 'Candidate')
+                              .split(' ')
+                              .map(p => p[0])
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase();
+
+                            return (
+                              <tr key={a.id || a.refNumber}>
+                                {/* Candidate & Ref */}
+                                <td>
+                                  <div className="academy-cell-candidate">
+                                    <div className="academy-candidate-avatar">{initials}</div>
+                                    <div>
+                                      <span className="academy-candidate-name">{a.fullName}</span>
+                                      <div style={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
+                                        <span className="academy-candidate-ref">{a.refNumber || 'APPLICANT'}</span>
+                                        <span className="academy-applied-date">
+                                          📅 {new Date(a.appliedAt).toLocaleDateString()}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Programme & Tuition */}
+                                <td>
+                                  <div>
+                                    <span className={`academy-journey-pill ${journeyClass}`}>
+                                      {journeyTitle} · {tuitionText}
+                                    </span>
+                                    <span className="academy-kit-tag">✓ Free Chef Knife Roll &amp; Uniform</span>
+                                  </div>
+                                </td>
+
+                                {/* Schedule & Level */}
+                                <td>
+                                  <div>
+                                    <span className="academy-schedule-line">
+                                      <CalendarDays size={12} color="#64748b" />
+                                      {a.schedule === 'weekend-executive' ? 'Weekend Executive (Sat)' : 'Weekday Intensive (Tue & Thu)'}
+                                    </span>
+                                    <span className="academy-experience-badge">
+                                      Level: {a.experience || 'Beginner'}
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Contact Details */}
+                                <td>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <a href={`tel:${a.phone}`} className="catering-phone-link">
+                                      <Phone size={12} color="#182838" /> {a.phone}
+                                    </a>
+                                    {a.email && (
+                                      <span className="catering-email-sub" title={a.email}>
+                                        {a.email}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Admissions Status Select */}
+                                <td>
+                                  <select
+                                    className={`academy-status-select status-${a.status.toLowerCase().replace(/\s+/g, '-')}`}
+                                    value={a.status}
+                                    onChange={e => updateAcademyStatusDirect(a.id, e.target.value as AcademyLead['status'])}
+                                  >
+                                    <option value="Pending Review">Pending Review</option>
+                                    <option value="Contacted">Contacted</option>
+                                    <option value="Admitted">Admitted</option>
+                                    <option value="Enrolled">Enrolled</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                  </select>
+                                </td>
+
+                                {/* Actions */}
+                                <td>
+                                  <div className="academy-actions-cell">
+                                    <a
+                                      href={`https://wa.me/${phoneClean.startsWith('234') ? phoneClean : phoneClean.startsWith('0') ? '234' + phoneClean.slice(1) : '234' + phoneClean}?text=${waMsg}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="academy-wa-btn"
+                                      title="Open WhatsApp chat with pre-written admissions invitation"
+                                    >
+                                      <MessageCircle size={14} /> WhatsApp
+                                    </a>
+                                    <button
+                                      className="academy-details-btn"
+                                      onClick={() => setSelectedAcademyDrawer(a)}
+                                      title="View candidate notes & starter kit"
+                                    >
+                                      <FileText size={13} /> Details
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  /* ========================================================= */
+                  /* ENHANCED CARDS GRID VIEW */
+                  /* ========================================================= */
+                  <div className="event-cards">
+                    {filteredCandidates.map(a => {
                       const phoneClean = a.phone.replace(/[^0-9]/g, '');
                       const journeyLabel =
                         a.journey === '3-months'
@@ -3796,7 +4334,7 @@ function App() {
                                 </div>
 
                                 <select
-                                  className={`status-select status-${a.status === 'Enrolled' || a.status === 'Admitted' ? 'delivered' : a.status === 'Contacted' ? 'ready' : 'new'}`}
+                                  className={`academy-status-select status-${a.status.toLowerCase().replace(/\s+/g, '-')}`}
                                   value={a.status}
                                   onChange={e => updateAcademyStatusDirect(a.id, e.target.value as AcademyLead['status'])}
                                 >
@@ -3816,27 +4354,27 @@ function App() {
                             </div>
                           </div>
 
-                          <div className="event-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', marginTop: 12 }}>
-                            <div className="meta-box">
+                          <div className="catering-meta-grid">
+                            <div>
                               <small>PROGRAMME JOURNEY</small>
                               <strong style={{ color: a.journey === '6-months' ? 'var(--brand-red)' : a.journey === '9-months' ? '#d97706' : 'var(--brand-navy)' }}>
                                 {journeyLabel}
                               </strong>
                             </div>
 
-                            <div className="meta-box">
+                            <div>
                               <small>STUDY SCHEDULE</small>
                               <strong>
                                 {a.schedule === 'weekend-executive' ? 'Weekend Executive (Saturdays)' : 'Weekday Intensive (Tue & Thu)'}
                               </strong>
                             </div>
 
-                            <div className="meta-box">
+                            <div>
                               <small>EXPERIENCE LEVEL</small>
                               <strong style={{ textTransform: 'capitalize' }}>{a.experience || 'Beginner'}</strong>
                             </div>
 
-                            <div className="meta-box">
+                            <div>
                               <small>FREE STARTER KIT</small>
                               <strong style={{ color: '#16a34a' }}>Knife Roll + Uniform + Secret Handout</strong>
                             </div>
@@ -3854,26 +4392,25 @@ function App() {
                               href={`https://wa.me/${phoneClean.startsWith('234') ? phoneClean : phoneClean.startsWith('0') ? '234' + phoneClean.slice(1) : '234' + phoneClean}?text=${waMsg}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="action-btn"
-                              style={{ background: '#25d366', color: '#ffffff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+                              className="academy-wa-btn"
                             >
                               <MessageCircle size={14} /> WhatsApp Candidate
                             </a>
-                            <a
-                              href={`tel:${a.phone}`}
-                              className="action-btn secondary"
-                              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            <button
+                              className="academy-details-btn"
+                              onClick={() => setSelectedAcademyDrawer(a)}
                             >
-                              <Phone size={14} /> Call Candidate
-                            </a>
+                              <FileText size={13} /> View Dossier
+                            </button>
                           </div>
                         </div>
                       );
                     })}
-                </div>
-              )}
-            </section>
-          )}
+                  </div>
+                )}
+              </section>
+            );
+          })()}
 
           {/* ========================================================= */}
           {/* 8. MESSAGES */}
@@ -4998,6 +5535,92 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* DRAWER: CULINARY ACADEMY CANDIDATE DOSSIER */}
+      {/* ========================================================= */}
+      {selectedAcademyDrawer && (() => {
+        const a = selectedAcademyDrawer;
+        const phoneClean = a.phone.replace(/[^0-9]/g, '');
+        const isDiploma = a.journey === '6-months';
+        const isExecutive = a.journey === '9-months';
+        const journeyTitle = isDiploma
+          ? '6 Months Pro Diploma ★'
+          : isExecutive
+          ? '9 Months Executive Masterclass'
+          : '3 Months Foundation Skills';
+        const tuitionText = isDiploma ? '₦490,000' : isExecutive ? '₦750,000' : '₦280,000';
+        const waMsg = encodeURIComponent(
+          `Hello ${a.fullName}! This is Chef Margaret & the Admissions Team at Ma'Great Culinary Arts Academy. We are following up regarding your registration (${a.refNumber}) for the ${journeyTitle}. Let us know if you have any questions regarding cohort schedules or tuition breakdown!`
+        );
+
+        return (
+          <div className="modal-backdrop" onClick={() => setSelectedAcademyDrawer(null)}>
+            <div className="receipt-drawer" onClick={e => e.stopPropagation()}>
+              <div className="receipt-header">
+                <div>
+                  <span className="order-badge">ACADEMY ADMISSIONS DOSSIER</span>
+                  <h2>{a.fullName}</h2>
+                  <small>{a.refNumber || 'APPLICANT'} · Applied: {new Date(a.appliedAt).toLocaleDateString()}</small>
+                </div>
+                <button className="icon-btn" onClick={() => setSelectedAcademyDrawer(null)}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="receipt-body">
+                <div className="receipt-box">
+                  <strong>Candidate Details &amp; Contact</strong>
+                  <p><b>Full Name:</b> {a.fullName}</p>
+                  <p><b>Phone Number:</b> <a href={`tel:${a.phone}`} style={{ color: '#c6381e', textDecoration: 'none', fontWeight: 700 }}>{a.phone}</a></p>
+                  {a.email && <p><b>Email Address:</b> {a.email}</p>}
+                  <p><b>Application Ref:</b> <span style={{ background: '#182838', color: '#fed485', padding: '1px 6px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>{a.refNumber}</span></p>
+                  <p><b>Current Status:</b> <span style={{ fontWeight: 700 }}>{a.status}</span></p>
+                </div>
+
+                <div className="receipt-box">
+                  <strong>Programme Registration</strong>
+                  <p><b>Chosen Journey:</b> {journeyTitle}</p>
+                  <p><b>Tuition Investment:</b> <span style={{ color: 'var(--brand-red)', fontWeight: 800 }}>{tuitionText}</span></p>
+                  <p><b>Study Schedule:</b> {a.schedule === 'weekend-executive' ? 'Weekend Executive (Saturdays Only)' : 'Weekday Intensive (Tuesdays & Thursdays)'}</p>
+                  <p><b>Prior Experience:</b> <span style={{ textTransform: 'capitalize' }}>{a.experience || 'Beginner'}</span></p>
+                  <p style={{ marginTop: 8, color: '#16a34a', fontWeight: 600 }}>
+                    ✓ Eligible for Starter Kit: Pro Knife Roll, Academy Chef Jacket, Apron &amp; Curriculum Handout.
+                  </p>
+                </div>
+
+                {a.notes && (
+                  <div className="receipt-box">
+                    <strong>Candidate Aspirations &amp; Notes</strong>
+                    <p style={{ fontStyle: 'italic', color: '#334155', background: '#f8fafc', padding: 10, borderRadius: 6, margin: '6px 0 0' }}>
+                      "{a.notes}"
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="receipt-footer">
+                <a
+                  href={`https://wa.me/${phoneClean.startsWith('234') ? phoneClean : phoneClean.startsWith('0') ? '234' + phoneClean.slice(1) : '234' + phoneClean}?text=${waMsg}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="whatsapp-btn"
+                  style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <MessageCircle size={15} /> Chat on WhatsApp
+                </a>
+                <a
+                  href={`tel:${a.phone}`}
+                  className="secondary-btn"
+                  style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <Phone size={15} /> Call Candidate
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* MODAL: SECURITY & STAFF ROLES MANAGEMENT */}
