@@ -48,7 +48,8 @@ import {
   Calendar,
   FileText,
   DollarSign,
-  GraduationCap
+  GraduationCap,
+  CheckCheck
 } from 'lucide-react';
 import { defaultFoods } from './data/menuData';
 
@@ -1398,13 +1399,117 @@ function App() {
     notify('Customer directory exported successfully.');
   };
 
+  // Helper: Smart humanized message timestamp resolver
+  const formatMessageTimestamp = (
+    msg?: { createdAt?: string; time?: string },
+    mode: 'list' | 'detail' = 'list'
+  ): string => {
+    if (!msg) return 'Recent';
+
+    let dateObj: Date | null = null;
+
+    // 1. Prioritize exact ISO createdAt timestamp (e.g. 2026-10-22T11:43:51.341Z)
+    if (msg.createdAt) {
+      const parsed = new Date(msg.createdAt);
+      if (!isNaN(parsed.getTime())) {
+        dateObj = parsed;
+      }
+    }
+
+    // 2. If no createdAt, check if time string is a parseable date/time (and not literal 'Just now' / 'Recent')
+    if (!dateObj && msg.time && msg.time !== 'Just now' && msg.time !== 'Recent') {
+      const parsed = new Date(msg.time);
+      if (!isNaN(parsed.getTime())) {
+        dateObj = parsed;
+      }
+    }
+
+    // 3. Fallback if no valid date could be parsed
+    if (!dateObj) {
+      return msg.time || 'Recent';
+    }
+
+    // 4. Detail mode: full date and time string for active conversation header
+    if (mode === 'detail') {
+      return dateObj.toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    // 5. List mode: smart relative / calendar timestamp
+    const now = new Date();
+    const diffMs = now.getTime() - dateObj.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+
+    // If message arrived within last 90 seconds
+    if (diffSec >= 0 && diffSec < 90) {
+      return 'Just now';
+    }
+
+    // If message arrived within last 60 minutes
+    if (diffMin >= 1 && diffMin < 60) {
+      return `${diffMin}m ago`;
+    }
+
+    const isToday =
+      now.getDate() === dateObj.getDate() &&
+      now.getMonth() === dateObj.getMonth() &&
+      now.getFullYear() === dateObj.getFullYear();
+
+    const timePart = dateObj.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    if (isToday) {
+      return `Today, ${timePart}`;
+    }
+
+    // Check if received yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      yesterday.getDate() === dateObj.getDate() &&
+      yesterday.getMonth() === dateObj.getMonth() &&
+      yesterday.getFullYear() === dateObj.getFullYear();
+
+    if (isYesterday) {
+      return `Yesterday, ${timePart}`;
+    }
+
+    // Check if same year
+    const isSameYear = now.getFullYear() === dateObj.getFullYear();
+    const datePart = dateObj.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short'
+    });
+
+    if (isSameYear) {
+      return `${datePart}, ${timePart}`;
+    }
+
+    return `${datePart} ${dateObj.getFullYear()}, ${timePart}`;
+  };
+
   // Message conversation handlers
   const openMessage = (m: any) => {
     setSelectedMessage(m);
     setReplyText(`Hello ${m.name},\nThank you for reaching out to Ma'Great Taste Restaurant & Catering!\nRegarding your enquiry: "${m.subject}":\n\n`);
     if (m.unread) {
       setMessages(prev => prev.map(item => (item.id === m.id ? { ...item, unread: false } : item)));
-      adminFetch(`${API_BASE}/messages/${m.id}/read`, { method: 'PATCH' }).catch(() => {});
+      adminFetch(`${API_BASE}/messages/${m.id}/read`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unread: false })
+      }).catch(() => {});
     }
   };
 
@@ -1414,6 +1519,11 @@ function App() {
     if (selectedMessage && selectedMessage.id === m.id) {
       setSelectedMessage({ ...selectedMessage, unread: nextUnread });
     }
+    adminFetch(`${API_BASE}/messages/${m.id}/read`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unread: nextUnread })
+    }).catch(() => {});
     notify(nextUnread ? 'Marked as unread.' : 'Marked as read.');
   };
 
@@ -3417,11 +3527,31 @@ function App() {
           {section === 'Messages' && (
             <div className="messages-layout">
               <section className="panel message-list">
-                <div className="panel-head">
+                <div className="panel-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h3>Inbox ({unread} unread)</h3>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      Inbox ({unread} unread)
+                      {unread > 0 && <span className="unread-pulse-dot" title={`${unread} unread messages`} />}
+                    </h3>
                     <p>Enquiries from website contact form</p>
                   </div>
+                  {unread > 0 && (
+                    <button
+                      className="secondary-btn"
+                      style={{ padding: '6px 11px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                      onClick={() => {
+                        setMessages(prev => prev.map(m => ({ ...m, unread: false })));
+                        if (selectedMessage) {
+                          setSelectedMessage({ ...selectedMessage, unread: false });
+                        }
+                        adminFetch(`${API_BASE}/messages/read-all`, { method: 'POST' }).catch(() => {});
+                        notify('All messages marked as read.');
+                      }}
+                      title="Mark all messages as read"
+                    >
+                      <CheckCheck size={14} /> Mark all read
+                    </button>
+                  )}
                 </div>
                 {messages.length === 0 ? (
                   <div className="empty-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
@@ -3435,13 +3565,24 @@ function App() {
                       key={m.id || idx}
                       onClick={() => openMessage(m)}
                     >
-                      <div className="message-avatar">{m.name ? m.name[0].toUpperCase() : 'M'}</div>
-                      <div className="message-preview">
-                        <div>
-                          <strong>{m.name}</strong>
-                          <small>{m.time || (m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'Recent')}</small>
+                      <div className="message-avatar-wrap">
+                        <div className={`message-avatar ${m.unread ? 'avatar-unread' : ''}`}>
+                          {m.name ? m.name[0].toUpperCase() : 'M'}
                         </div>
-                        <b>{m.subject || 'Website Enquiry'}</b>
+                        {m.unread && <span className="avatar-status-dot-green" title="Unread message" />}
+                      </div>
+                      <div className="message-preview">
+                        <div className="message-preview-header">
+                          <div className="message-sender-name-wrap">
+                            {m.unread && <span className="unread-pulse-dot" title="Unread message" />}
+                            <strong className={m.unread ? 'unread-name' : ''}>{m.name}</strong>
+                            {m.unread && <span className="unread-pill-tag">New</span>}
+                          </div>
+                          <small className={`message-time-text ${m.unread ? 'unread-time' : ''}`}>
+                            {formatMessageTimestamp(m, 'list')}
+                          </small>
+                        </div>
+                        <b className={m.unread ? 'unread-subject' : ''}>{m.subject || 'Website Enquiry'}</b>
                         <p>{m.body || m.message || 'No message content'}</p>
                       </div>
                     </div>
@@ -3462,15 +3603,26 @@ function App() {
                   <div className="message-detail-active">
                     <div className="message-detail-header">
                       <div className="message-sender-info">
-                        <div className="message-avatar" style={{ width: 44, height: 44, fontSize: 16 }}>
-                          {selectedMessage.name ? selectedMessage.name[0].toUpperCase() : 'M'}
+                        <div className="message-avatar-wrap" style={{ width: 44, height: 44 }}>
+                          <div className="message-avatar" style={{ width: 44, height: 44, fontSize: 16 }}>
+                            {selectedMessage.name ? selectedMessage.name[0].toUpperCase() : 'M'}
+                          </div>
+                          {selectedMessage.unread && <span className="avatar-status-dot-green" title="Unread message" />}
                         </div>
                         <div>
-                          <h3 style={{ margin: 0, fontSize: 15, color: 'var(--brand-navy)' }}>{selectedMessage.name}</h3>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <h3 style={{ margin: 0, fontSize: 15, color: 'var(--brand-navy)' }}>{selectedMessage.name}</h3>
+                            {selectedMessage.unread && (
+                              <div className="unread-detail-badge">
+                                <span className="unread-pulse-dot" />
+                                <span>Unread</span>
+                              </div>
+                            )}
+                          </div>
                           <div className="message-meta-strip">
                             <span><b>Email:</b> {selectedMessage.email || 'N/A'}</span>
                             <span><b>Phone:</b> {selectedMessage.phone || 'N/A'}</span>
-                            <span><b>Received:</b> {selectedMessage.time || (selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString() : 'Recent')}</span>
+                            <span><b>Received:</b> {formatMessageTimestamp(selectedMessage, 'detail')}</span>
                           </div>
                         </div>
                       </div>
