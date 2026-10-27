@@ -3074,3 +3074,305 @@ tbody tr:hover {
   opacity: 0.9;
 }
 
+/* =====================================================================
+   ADMIN LOGIN GATEWAY & ROLE-BASED ACCESS CONTROL (RBAC)
+   ===================================================================== */
+.admin-login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 20%, #1e3347 0%, #101a24 100%);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-login-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -150px;
+  right: -150px;
+  width: 450px;
+  height: 450px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(198, 56, 30, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 38px 34px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 2;
+}
+
+.admin-login-brand {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.admin-login-brand img {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  margin-bottom: 12px;
+}
+
+.admin-login-brand h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--brand-navy);
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
+}
+
+.admin-login-brand p {
+  font-size: 13px;
+  color: #687c88;
+  margin: 0;
+}
+
+.admin-login-form .form-group {
+  margin-bottom: 18px;
+}
+
+.admin-login-form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #182838;
+  margin-bottom: 6px;
+}
+
+.admin-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.admin-input-wrap input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #dbe2e8;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #fdfdfd;
+  color: #182838;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.admin-input-wrap input:focus {
+  outline: none;
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 3px rgba(198, 56, 30, 0.12);
+  background: #ffffff;
+}
+
+.admin-pwd-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #8c9ba5;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.admin-pwd-toggle:hover {
+  color: #182838;
+}
+
+.admin-login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fdf2f0;
+  border: 1px solid #f8c9c1;
+  color: #c6381e;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.admin-login-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--brand-red);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-login-btn:hover:not(:disabled) {
+  background: var(--brand-red-hover);
+  transform: translateY(-1px);
+}
+
+.admin-login-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-demo-box {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #edf2f6;
+  text-align: center;
+}
+
+.admin-demo-box small {
+  display: block;
+  font-size: 11px;
+  color: #8c9ba5;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.admin-quick-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-quick-btn {
+  background: #f4f7fa;
+  border: 1px solid #e2e8ee;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #243649;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.15s;
+}
+
+.admin-quick-btn:hover {
+  background: #ffffff;
+  border-color: var(--brand-red);
+  color: var(--brand-red);
+}
+
+/* Role Badges */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.role-badge.super-admin,
+.role-badge.super_admin {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.role-badge.admin-staff,
+.role-badge.admin_staff {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.header-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+.header-role-pill.super,
+.header-role-pill.super_admin {
+  background: #fff1ee;
+  color: var(--brand-red);
+}
+
+.header-role-pill.staff,
+.header-role-pill.admin_staff {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* Team Management Modal */
+.team-summary-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.team-list-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+
+.team-list-card:hover {
+  border-color: #cbd5e1;
+}
+
+.team-avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #182838;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.team-avatar-circle.super {
+  background: var(--brand-red);
+}
+
+.team-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+

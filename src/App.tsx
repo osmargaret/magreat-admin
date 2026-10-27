@@ -49,9 +49,37 @@ import {
   FileText,
   DollarSign,
   GraduationCap,
-  CheckCheck
+  CheckCheck,
+  Lock,
+  Eye,
+  EyeOff,
+  LogOut,
+  UserPlus,
+  ShieldAlert
 } from 'lucide-react';
 import { defaultFoods } from './data/menuData';
+
+export type AdminRole = 'super_admin' | 'admin_staff';
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  status: 'Active' | 'Suspended';
+  createdAt?: string;
+  lastLoginAt?: string;
+  invitedBy?: string;
+}
+
+const getStoredAdmin = (): AdminUser | null => {
+  try {
+    const raw = localStorage.getItem('magreat_admin_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 // Bulletproof backend URL resolver (auto-detects production environments and fallbacks to live Render backend)
 const getApiBase = () => {
@@ -73,13 +101,14 @@ const getApiBase = () => {
 const API_BASE = getApiBase();
 const ADMIN_SECRET = String((import.meta as any).env?.VITE_ADMIN_SECRET || 'MagreatTaste#AdminSecret2026!Key_x99').trim();
 
-/** Authenticated fetch — automatically attaches the admin Bearer token */
+/** Authenticated fetch — automatically attaches the logged in admin user session token or system secret */
 function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
-  if (ADMIN_SECRET) headers['Authorization'] = `Bearer ${ADMIN_SECRET}`;
+  const token = localStorage.getItem('magreat_admin_token') || ADMIN_SECRET;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   return fetch(url, { ...options, headers });
 }
 
@@ -379,6 +408,24 @@ function App() {
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
 
+  // Admin Authentication & RBAC Session State
+  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(getStoredAdmin);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Admin Team & Privileges State
+  const [adminTeam, setAdminTeam] = useState<AdminUser[]>([]);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
+  const [inviteRole, setInviteRole] = useState<AdminRole>('admin_staff');
+  const [isInviting, setIsInviting] = useState(false);
+
   // Form states: Food Add/Edit
   const [foodName, setFoodName] = useState('');
   const [foodPrice, setFoodPrice] = useState('');
@@ -464,6 +511,148 @@ function App() {
   const notify = (s: string) => {
     setToast(s);
     window.setTimeout(() => setToast(''), 3200);
+  };
+
+  // Dynamic Navigation: Financial Analytics is completely restricted to Super Admin (Chef Margaret)
+  const navList = useMemo(() => {
+    return nav.filter(item => {
+      if (item.label === 'Analytics' && currentAdmin?.role !== 'super_admin') {
+        return false;
+      }
+      return true;
+    });
+  }, [currentAdmin?.role]);
+
+  // Restrict staff if they attempt to navigate to Analytics
+  useEffect(() => {
+    if (currentAdmin && currentAdmin.role === 'admin_staff' && section === 'Analytics') {
+      setSection('Overview');
+      notify('Access Restricted: Financial analytics are reserved for Head Chef Margaret.');
+    }
+  }, [section, currentAdmin]);
+
+  // Load team when Super Admin opens portal
+  const fetchAdminTeam = async () => {
+    if (currentAdmin?.role !== 'super_admin') return;
+    setLoadingTeam(true);
+    try {
+      const res = await adminFetch(`${API_BASE}/admin/team`);
+      if (res.ok) {
+        const data = await res.json();
+        setAdminTeam(data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentAdmin?.role === 'super_admin') {
+      fetchAdminTeam();
+    }
+  }, [currentAdmin]);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setLoginError('Please enter both your work email and password.');
+      return;
+    }
+    setIsLoggingIn(true);
+    setLoginError('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid work email or password.');
+      }
+      localStorage.setItem('magreat_admin_token', data.token);
+      localStorage.setItem('magreat_admin_user', JSON.stringify(data.user));
+      setCurrentAdmin(data.user);
+      notify(`Welcome back, ${data.user.name}!`);
+    } catch (err: any) {
+      setLoginError(err.message || 'Login failed. Please verify credentials.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleAdminSignOut = () => {
+    localStorage.removeItem('magreat_admin_token');
+    localStorage.removeItem('magreat_admin_user');
+    setCurrentAdmin(null);
+    setLoginEmail('');
+    setLoginPassword('');
+    setShowProfileMenu(false);
+    notify('Signed out of admin portal.');
+  };
+
+  const handleInviteAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteName.trim() || !inviteEmail.trim() || !invitePassword.trim()) {
+      notify('Please fill out all fields (name, email, password).');
+      return;
+    }
+    setIsInviting(true);
+    try {
+      const res = await adminFetch(`${API_BASE}/admin/team/invite`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: inviteName.trim(),
+          email: inviteEmail.trim(),
+          password: invitePassword,
+          role: inviteRole
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to invite administrator.');
+      notify(`Administrator "${inviteName}" successfully invited!`);
+      setInviteName('');
+      setInviteEmail('');
+      setInvitePassword('');
+      setInviteRole('admin_staff');
+      setInviteModalOpen(false);
+      fetchAdminTeam();
+    } catch (err: any) {
+      notify(err.message || 'Error inviting admin.');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to remove ${name} from admin access?`)) return;
+    try {
+      const res = await adminFetch(`${API_BASE}/admin/team/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to remove admin.');
+      notify(`Removed ${name} from admin access.`);
+      fetchAdminTeam();
+    } catch (err: any) {
+      notify(err.message || 'Error removing admin.');
+    }
+  };
+
+  const handleToggleAdminStatus = async (admin: AdminUser) => {
+    const newStatus = admin.status === 'Active' ? 'Suspended' : 'Active';
+    try {
+      const res = await adminFetch(`${API_BASE}/admin/team/${admin.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update status.');
+      notify(`${admin.name} is now ${newStatus}.`);
+      fetchAdminTeam();
+    } catch (err: any) {
+      notify(err.message || 'Error updating status.');
+    }
   };
 
   // Immediate Health Check with automatic retry
@@ -1733,6 +1922,106 @@ function App() {
     notify('Report downloaded successfully.');
   };
 
+  // =========================================================================
+  // AUTHENTICATION GATEWAY: ADMIN LOGIN SCREEN (EMAIL + PASSWORD)
+  // =========================================================================
+  if (!currentAdmin) {
+    return (
+      <div className="admin-login-wrapper">
+        <div className="admin-login-card">
+          <div className="admin-login-brand">
+            <img
+              src="https://res.cloudinary.com/p2pa6dfi/image/upload/f_auto,q_auto,w_200/v1792616012/magreat_brand/logo.jpg"
+              alt="Ma'Great Taste"
+              onError={e => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+            />
+            <h2>Ma'Great Taste</h2>
+            <p>Kitchen Operations &amp; Management Portal</p>
+          </div>
+
+          {loginError && (
+            <div className="admin-login-error">
+              <AlertCircle size={16} />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAdminLogin} className="admin-login-form">
+            <div className="form-group">
+              <label htmlFor="admin-email">Staff Work Email</label>
+              <div className="admin-input-wrap">
+                <input
+                  id="admin-email"
+                  type="email"
+                  required
+                  placeholder="e.g. margaret@magreattaste.com"
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="admin-password">Password</label>
+              <div className="admin-input-wrap">
+                <input
+                  id="admin-password"
+                  type={showLoginPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Enter your security password"
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="admin-pwd-toggle"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                  aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="admin-login-btn" disabled={isLoggingIn}>
+              {isLoggingIn ? 'Authenticating...' : 'Sign In to Admin Portal'}
+            </button>
+          </form>
+
+          <div className="admin-demo-box">
+            <small>Quick Access Demo Accounts</small>
+            <div className="admin-quick-pills">
+              <button
+                type="button"
+                className="admin-quick-btn"
+                onClick={() => {
+                  setLoginEmail('margaret@magreattaste.com');
+                  setLoginPassword('ChefMargaret2026!');
+                  setLoginError('');
+                }}
+              >
+                <span>👑 <strong>Chef Margaret</strong> (Super Admin)</span>
+                <span style={{ fontSize: 11, color: '#8c9ba5' }}>Full Financials</span>
+              </button>
+              <button
+                type="button"
+                className="admin-quick-btn"
+                onClick={() => {
+                  setLoginEmail('tunde@magreattaste.com');
+                  setLoginPassword('StaffPassword2026!');
+                  setLoginError('');
+                }}
+              >
+                <span>👨‍🍳 <strong>Tunde Staff</strong> (Admin Staff)</span>
+                <span style={{ fontSize: 11, color: '#8c9ba5' }}>Finances Hidden</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       {/* Toast popup */}
@@ -1778,12 +2067,13 @@ function App() {
 
         {/* Navigation Groups */}
         <div className="sidebar-nav-scroll">
-          {['WORKSPACE', 'ENGAGE', 'BUSINESS'].map(group => (
-            <div className="nav-group" key={group}>
-              <div className="nav-label">{group}</div>
-              {nav
-                .filter(n => n.group === group)
-                .map(item => {
+          {['WORKSPACE', 'ENGAGE', 'BUSINESS'].map(group => {
+            const groupItems = navList.filter(n => n.group === group);
+            if (groupItems.length === 0) return null;
+            return (
+              <div className="nav-group" key={group}>
+                <div className="nav-label">{group}</div>
+                {groupItems.map(item => {
                   const Icon = item.icon;
                   const active = section === item.label;
                   return (
@@ -1812,17 +2102,20 @@ function App() {
                     </button>
                   );
                 })}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* Sidebar Footer */}
         <div className="sidebar-bottom">
           <div className="profile" onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ cursor: 'pointer' }}>
-            <div className="avatar">MS</div>
+            <div className="avatar">
+              {currentAdmin.name ? currentAdmin.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'AD'}
+            </div>
             <div className="profile-copy">
-              <strong>Margaret S.</strong>
-              <small>Store Manager · Lagos</small>
+              <strong>{currentAdmin.name}</strong>
+              <small>{currentAdmin.role === 'super_admin' ? '👑 Head Chef' : '👨‍🍳 Staff Admin'}</small>
             </div>
             <ChevronDown size={14} />
           </div>
@@ -1975,19 +2268,28 @@ function App() {
             </div>
 
             {/* Top avatar with profile popover */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
+              <span className={`header-role-pill ${currentAdmin.role}`}>
+                {currentAdmin.role === 'super_admin' ? '👑 Super Admin' : '👨‍🍳 Staff Admin'}
+              </span>
               <div
                 className="top-avatar"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 style={{ cursor: 'pointer' }}
+                title={`${currentAdmin.name} (${currentAdmin.role})`}
               >
-                MS
+                {currentAdmin.name ? currentAdmin.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'AD'}
               </div>
               {showProfileMenu && (
                 <div className="profile-popover">
                   <div style={{ paddingBottom: 10, borderBottom: '1px solid #eef2f5', marginBottom: 10 }}>
-                    <strong style={{ display: 'block', fontSize: 13, color: '#182838' }}>Chef Margaret</strong>
-                    <span style={{ fontSize: 11, color: '#687c88' }}>Head Chef & Founder</span>
+                    <strong style={{ display: 'block', fontSize: 13, color: '#182838' }}>{currentAdmin.name}</strong>
+                    <span style={{ fontSize: 11, color: '#687c88' }}>{currentAdmin.email}</span>
+                    <div style={{ marginTop: 6 }}>
+                      <span className={`role-badge ${currentAdmin.role}`}>
+                        {currentAdmin.role === 'super_admin' ? '👑 Super Admin' : '👨‍🍳 Kitchen Staff'}
+                      </span>
+                    </div>
                   </div>
                   <button className="popover-link" onClick={() => { setSection('Settings'); setShowProfileMenu(false); }}>
                     <Settings size={14} /> Store Settings
@@ -1995,8 +2297,17 @@ function App() {
                   <button className="popover-link" onClick={() => { setSection('Customers'); setShowProfileMenu(false); }}>
                     <Percent size={14} /> Customer Discounts
                   </button>
-                  <button className="popover-link" onClick={() => { setShowSecurityModal(true); setShowProfileMenu(false); }}>
-                    <ShieldCheck size={14} /> Security & Roles
+                  {currentAdmin.role === 'super_admin' && (
+                    <button className="popover-link" onClick={() => { setShowSecurityModal(true); setShowProfileMenu(false); }}>
+                      <ShieldCheck size={14} /> Admin Team &amp; Roles
+                    </button>
+                  )}
+                  <button
+                    className="popover-link"
+                    onClick={handleAdminSignOut}
+                    style={{ color: '#c6381e', borderTop: '1px solid #f0f3f6', marginTop: 6, paddingTop: 8 }}
+                  >
+                    <LogOut size={14} /> Sign Out
                   </button>
                 </div>
               )}
@@ -2013,7 +2324,7 @@ function App() {
                 OCTOBER 2026 <span>•</span> LAGOS, NIGERIA
               </div>
               <h1>
-                {section === 'Overview' && 'Good morning, Chef Margaret 👋'}
+                {section === 'Overview' && (currentAdmin.role === 'super_admin' ? 'Good morning, Chef Margaret 👋' : `Good morning, ${currentAdmin.name} 👨‍🍳`)}
                 {section === 'Orders' && 'Orders Management'}
                 {section === 'Menu management' && 'Menu Management'}
                 {section === 'Catering & events' && 'Catering & Events'}
@@ -2027,7 +2338,7 @@ function App() {
                 {section === 'Settings' && 'Store Settings'}
               </h1>
               <p>
-                {section === 'Overview' && 'Here is what’s cooking at Ma’Great Taste today.'}
+                {section === 'Overview' && (currentAdmin.role === 'super_admin' ? 'Here is what’s cooking at Ma’Great Taste today.' : 'Welcome to your daily kitchen operations and food fulfillment dashboard.')}
                 {section === 'Orders' && 'Track and fulfil incoming orders from the website and delivery dispatch.'}
                 {section === 'Menu management' && 'Add dishes, update pricing, upload dish photos, and manage availability.'}
                 {section === 'Catering & events' && 'Manage high-value catering leads, corporate bookings, send quotes, and discuss menus.'}
@@ -2073,19 +2384,35 @@ function App() {
 
               {/* Stats */}
               <div className="stat-grid">
-                <div className="stat-card">
-                  <div className="stat-top">
-                    <div className="stat-icon green">
-                      <CircleDollarSign />
+                {currentAdmin.role === 'super_admin' ? (
+                  <div className="stat-card">
+                    <div className="stat-top">
+                      <div className="stat-icon green">
+                        <CircleDollarSign />
+                      </div>
+                      <span className="stat-change up">+18%</span>
                     </div>
-                    <span className="stat-change up">+18%</span>
+                    <p>Gross revenue (Real-time)</p>
+                    <strong className="stat-value">{money(orders.reduce((sum, o) => sum + (o.total || 0), 0))}</strong>
+                    <div className="stat-bottom">
+                      <small>{orders.length} orders recorded</small>
+                    </div>
                   </div>
-                  <p>Gross revenue (Real-time)</p>
-                  <strong className="stat-value">{money(orders.reduce((sum, o) => sum + (o.total || 0), 0))}</strong>
-                  <div className="stat-bottom">
-                    <small>{orders.length} orders recorded</small>
+                ) : (
+                  <div className="stat-card">
+                    <div className="stat-top">
+                      <div className="stat-icon green">
+                        <UtensilsCrossed />
+                      </div>
+                      <span className="stat-change up">Kitchen Live</span>
+                    </div>
+                    <p>Kitchen Active Menu</p>
+                    <strong className="stat-value">{foods.filter(f => f.status === 'Available').length} dishes</strong>
+                    <div className="stat-bottom">
+                      <small>{foods.length} total items catalogue</small>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="stat-card">
                   <div className="stat-top">
@@ -2134,63 +2461,90 @@ function App() {
 
               {/* Revenue & Category Breakdown Grid */}
               <div className="overview-grid">
-                <section className="panel">
-                  <div className="panel-head">
-                    <div>
-                      <h3>Revenue performance</h3>
-                      <p>Weekly order volume across Lagos</p>
+                {currentAdmin.role === 'super_admin' ? (
+                  <section className="panel">
+                    <div className="panel-head">
+                      <div>
+                        <h3>Revenue performance</h3>
+                        <p>Weekly order volume across Lagos</p>
+                      </div>
+                      <span className="trend-pill">
+                        <TrendingUp size={13} /> +24.8% vs last month
+                      </span>
                     </div>
-                    <span className="trend-pill">
-                      <TrendingUp size={13} /> +24.8% vs last month
-                    </span>
-                  </div>
-                  <div className="revenue-total">
-                    <strong>{money(grossRevenue)}</strong>
-                    <small>{orders.length > 0 ? `${orders.length} orders fulfilled online` : 'Live online kitchen revenue'}</small>
-                  </div>
-                  <div className="chart">
-                    <div className="chart-y">
-                      <span>₦400k</span>
-                      <span>₦300k</span>
-                      <span>₦200k</span>
-                      <span>₦100k</span>
-                      <span>₦0</span>
+                    <div className="revenue-total">
+                      <strong>{money(grossRevenue)}</strong>
+                      <small>{orders.length > 0 ? `${orders.length} orders fulfilled online` : 'Live online kitchen revenue'}</small>
                     </div>
-                    <div className="chart-area">
-                      <div className="gridline g1" />
-                      <div className="gridline g2" />
-                      <div className="gridline g3" />
-                      <div className="gridline g4" />
-                      <svg className="chart-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#c6381e" stopOpacity="0.28" />
-                            <stop offset="100%" stopColor="#c6381e" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        <path
-                          d="M0,110 C80,95 140,40 220,55 C300,70 380,20 500,28 L500,150 L0,150 Z"
-                          fill="url(#chartGrad)"
-                        />
-                        <path
-                          d="M0,110 C80,95 140,40 220,55 C300,70 380,20 500,28"
-                          fill="none"
-                          stroke="#c6381e"
-                          strokeWidth="3"
-                        />
-                      </svg>
-                      <div className="chart-x">
-                        <span>Mon</span>
-                        <span>Tue</span>
-                        <span>Wed</span>
-                        <span>Thu</span>
-                        <span>Fri</span>
-                        <span>Sat</span>
-                        <span>Sun</span>
+                    <div className="chart">
+                      <div className="chart-y">
+                        <span>₦400k</span>
+                        <span>₦300k</span>
+                        <span>₦200k</span>
+                        <span>₦100k</span>
+                        <span>₦0</span>
+                      </div>
+                      <div className="chart-area">
+                        <div className="gridline g1" />
+                        <div className="gridline g2" />
+                        <div className="gridline g3" />
+                        <div className="gridline g4" />
+                        <svg className="chart-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                          <defs>
+                            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#c6381e" stopOpacity="0.28" />
+                              <stop offset="100%" stopColor="#c6381e" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            d="M0,110 C80,95 140,40 220,55 C300,70 380,20 500,28 L500,150 L0,150 Z"
+                            fill="url(#chartGrad)"
+                          />
+                          <path
+                            d="M0,110 C80,95 140,40 220,55 C300,70 380,20 500,28"
+                            fill="none"
+                            stroke="#c6381e"
+                            strokeWidth="3"
+                          />
+                        </svg>
+                        <div className="chart-x">
+                          <span>Mon</span>
+                          <span>Tue</span>
+                          <span>Wed</span>
+                          <span>Thu</span>
+                          <span>Fri</span>
+                          <span>Sat</span>
+                          <span>Sun</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
+                ) : (
+                  <section className="panel">
+                    <div className="panel-head">
+                      <div>
+                        <h3>Active Kitchen Order Queue</h3>
+                        <p>Recent customer tickets awaiting packing &amp; dispatch</p>
+                      </div>
+                      <button className="secondary-btn" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => setSection('Orders')}>
+                        View all orders <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {orders.slice(0, 4).map(o => (
+                        <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #eef2f5' }}>
+                          <div>
+                            <strong style={{ fontSize: 13, color: '#182838' }}>{o.customer}</strong>
+                            <span style={{ display: 'block', fontSize: 11, color: '#687c88' }}>{o.items?.length || 1} items · {o.address || 'Lagos Delivery'}</span>
+                          </div>
+                          <span className={`status status-${o.status === 'Delivered' ? 'green' : o.status === 'Preparing' ? 'orange' : 'blue'}`}>
+                            {o.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
                 <section className="panel category-panel">
                   <div className="panel-head">
@@ -4646,51 +5000,192 @@ function App() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL: SECURITY & STAFF ROLES */}
+      {/* MODAL: SECURITY & STAFF ROLES MANAGEMENT */}
       {/* ========================================================= */}
       {showSecurityModal && (
         <div className="modal-backdrop" onClick={() => setShowSecurityModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 680, width: '94%' }} onClick={e => e.stopPropagation()}>
             <div className="modal-head">
               <div>
                 <span className="modal-icon">
                   <ShieldCheck size={19} />
                 </span>
-                <h2>Security & Staff Roles</h2>
-                <p>Manage kitchen staff access, dispatch privileges, and manager PIN.</p>
+                <h2>Admin Team &amp; Access Roles</h2>
+                <p>Manage kitchen staff invitations, login credentials, and permission tiers.</p>
               </div>
               <button className="icon-btn" onClick={() => setShowSecurityModal(false)}>
                 <X size={20} />
               </button>
             </div>
 
-            <div className="receipt-box" style={{ background: '#ffffff' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div>
-                  <strong>Chef Margaret (Owner)</strong>
-                  <small style={{ color: '#687c88', display: 'block' }}>Super Administrator · Full Access</small>
-                </div>
-                <span className="status status-green">Active</span>
+            {/* Role Matrix Explanation Banner */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', marginBottom: 18, fontSize: 12, lineHeight: 1.6, color: '#334155' }}>
+              <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ChefHat size={15} color="var(--brand-red)" /> Role-Based Access Privileges Matrix
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div>
-                  <strong>Kitchen Supervisor</strong>
-                  <small style={{ color: '#687c88', display: 'block' }}>Orders, Menu Management & Prep Status</small>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 8 }}>
+                <div style={{ background: '#fff1ee', padding: '10px 12px', borderRadius: 8, border: '1px solid #fed7aa' }}>
+                  <strong style={{ color: 'var(--brand-red)', display: 'block', marginBottom: 3 }}>👑 Super Admin (Chef Margaret)</strong>
+                  <span>Full unrestricted access: total gross revenue, income performance charts, team invitation, and bank settlement settings.</span>
                 </div>
-                <span className="status status-green">Active</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong>Dispatch & Courier Lead</strong>
-                  <small style={{ color: '#687c88', display: 'block' }}>Orders, Delivery Addresses & Dockets</small>
+                <div style={{ background: '#eff6ff', padding: '10px 12px', borderRadius: 8, border: '1px solid #bfdbfe' }}>
+                  <strong style={{ color: '#1d4ed8', display: 'block', marginBottom: 3 }}>👨‍🍳 Kitchen Staff (Admin Staff)</strong>
+                  <span>Daily kitchen operations: order packing &amp; dispatch, menu dish pricing &amp; availability, broadcasts, customer chat, and discounts. <b>Total finances completely masked.</b></span>
                 </div>
-                <span className="status status-green">Active</span>
               </div>
             </div>
 
-            <div className="modal-actions">
-              <button className="primary-btn" onClick={() => { notify('Staff security configuration updated.'); setShowSecurityModal(false); }}>
-                Save Security Settings
+            {/* Team Members List */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <strong style={{ fontSize: 13, color: '#182838' }}>Active Administrators ({adminTeam.length})</strong>
+                <button
+                  style={{ background: 'none', border: 0, color: 'var(--brand-red)', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                  onClick={fetchAdminTeam}
+                >
+                  Refresh list
+                </button>
+              </div>
+
+              {loadingTeam ? (
+                <div style={{ padding: 24, textAlign: 'center', color: '#687c88' }}>Loading administrators...</div>
+              ) : adminTeam.length === 0 ? (
+                <div style={{ padding: 18, textAlign: 'center', color: '#687c88', background: '#f8fafc', borderRadius: 8 }}>
+                  No administrators loaded. Please click "Refresh list".
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 260, overflowY: 'auto' }}>
+                  {adminTeam.map(admin => {
+                    const isPrimaryOwner = admin.email === 'margaret@magreattaste.com' || admin.email === 'admin@magreattaste.com';
+                    const isSelf = admin.id === currentAdmin.id;
+                    return (
+                      <div key={admin.id} className="team-list-card">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div className={`team-avatar-circle ${admin.role === 'super_admin' ? 'super' : ''}`}>
+                            {admin.name ? admin.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'AD'}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <strong style={{ fontSize: 13, color: '#0f172a' }}>{admin.name}</strong>
+                              {isSelf && <span style={{ fontSize: 10, color: '#64748b' }}>(You)</span>}
+                            </div>
+                            <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>{admin.email}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                              <span className={`role-badge ${admin.role}`}>
+                                {admin.role === 'super_admin' ? '👑 Super Admin' : '👨‍🍳 Kitchen Staff'}
+                              </span>
+                              <span className={`status status-${admin.status === 'Active' ? 'green' : 'red'}`} style={{ fontSize: 10, padding: '2px 6px' }}>
+                                {admin.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="team-card-actions">
+                          {!isPrimaryOwner && !isSelf && (
+                            <>
+                              <button
+                                type="button"
+                                className="secondary-btn"
+                                style={{ padding: '5px 10px', fontSize: 11 }}
+                                onClick={() => handleToggleAdminStatus(admin)}
+                                title={admin.status === 'Active' ? 'Suspend admin' : 'Activate admin'}
+                              >
+                                {admin.status === 'Active' ? 'Suspend' : 'Activate'}
+                              </button>
+                              <button
+                                type="button"
+                                className="icon-btn delete-btn"
+                                style={{ color: '#dc2626' }}
+                                onClick={() => handleDeleteAdmin(admin.id, admin.name)}
+                                title="Remove admin"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                          {isPrimaryOwner && (
+                            <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', paddingRight: 6 }}>Primary Owner</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Invite Form */}
+            <form onSubmit={handleInviteAdmin} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '16px', marginTop: 14 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <UserPlus size={16} color="var(--brand-red)" /> Invite &amp; Grant Access to New Staff
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, marginBottom: 10 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
+                  Full Name
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Tunde Adebayo"
+                    value={inviteName}
+                    onChange={e => setInviteName(e.target.value)}
+                    style={{ width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+                  />
+                </label>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
+                  Staff Work Email
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. tunde@magreattaste.com"
+                    value={inviteEmail}
+                    onChange={e => setInviteEmail(e.target.value)}
+                    style={{ width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
+                  Initial Password
+                  <input
+                    type="password"
+                    required
+                    placeholder="Create a temporary password"
+                    value={invitePassword}
+                    onChange={e => setInvitePassword(e.target.value)}
+                    style={{ width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12 }}
+                  />
+                </label>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
+                  Assigned Permission Role
+                  <select
+                    value={inviteRole}
+                    onChange={e => setInviteRole(e.target.value as AdminRole)}
+                    style={{ width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 12, background: '#ffffff' }}
+                  >
+                    <option value="admin_staff">👨‍🍳 Kitchen Staff (Financials Masked &amp; Hidden)</option>
+                    <option value="super_admin">👑 Super Admin (Full Financial Access)</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={isInviting}
+                  style={{ padding: '8px 16px', fontSize: 12 }}
+                >
+                  <UserPlus size={14} /> {isInviting ? 'Inviting...' : 'Invite Administrator'}
+                </button>
+              </div>
+            </form>
+
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button type="button" className="secondary-btn" onClick={() => setShowSecurityModal(false)}>
+                Done
               </button>
             </div>
           </div>
