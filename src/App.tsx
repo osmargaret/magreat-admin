@@ -446,7 +446,7 @@ function App() {
   // Settings States (Real-time backend synchronization)
   const [settingsBusinessName, setSettingsBusinessName] = useState(savedLocalSettings?.businessName || "Ma'Great Taste Restaurant & Catering Services");
   const [settingsAddress, setSettingsAddress] = useState(savedLocalSettings?.kitchenAddress || 'Lekki Phase 1, Lagos, Nigeria');
-  const [settingsPhone, setSettingsPhone] = useState(savedLocalSettings?.phone || '+234 9059271973');
+  const [settingsPhone, setSettingsPhone] = useState(savedLocalSettings?.phone || '+234 905 827 1973');
   const [settingsEmail, setSettingsEmail] = useState(savedLocalSettings?.email || 'orders@magreattaste.ng');
   const [settingsOnlineOrdering, setSettingsOnlineOrdering] = useState(savedLocalSettings?.onlineOrdering !== undefined ? savedLocalSettings.onlineOrdering : true);
   const [settingsWhatsappAlerts, setSettingsWhatsappAlerts] = useState(savedLocalSettings?.whatsappAlerts !== undefined ? savedLocalSettings.whatsappAlerts : true);
