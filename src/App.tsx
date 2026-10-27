@@ -47,7 +47,8 @@ import {
   Square,
   Calendar,
   FileText,
-  DollarSign
+  DollarSign,
+  GraduationCap
 } from 'lucide-react';
 import { defaultFoods } from './data/menuData';
 
@@ -87,12 +88,27 @@ type Section =
   | 'Menu management'
   | 'Catering & events'
   | 'Meal plans'
+  | 'Culinary school'
   | 'Messages'
   | 'Newsletter & broadcasts'
   | 'Saved meals & reminders'
   | 'Analytics'
   | 'Customers'
   | 'Settings';
+
+export type AcademyLead = {
+  id: string;
+  refNumber: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  journey: string;
+  schedule: string;
+  experience: string;
+  notes?: string;
+  status: 'Pending Review' | 'Admitted' | 'Contacted' | 'Enrolled' | 'Cancelled';
+  appliedAt: string;
+};
 
 export type NewsletterSubscriber = {
   id: string;
@@ -303,6 +319,7 @@ const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Menu management', icon: UtensilsCrossed, group: 'WORKSPACE' },
   { label: 'Catering & events', icon: CalendarDays, group: 'WORKSPACE' },
   { label: 'Meal plans', icon: Snowflake, group: 'WORKSPACE' },
+  { label: 'Culinary school', icon: GraduationCap, group: 'WORKSPACE' },
   { label: 'Messages', icon: MessageSquare, group: 'ENGAGE' },
   { label: 'Newsletter & broadcasts', icon: Mail, group: 'ENGAGE' },
   { label: 'Saved meals & reminders', icon: Heart, group: 'ENGAGE' },
@@ -321,6 +338,9 @@ function App() {
   const [customers, setCustomers] = useState<CustomerRecord[]>(initialCustomers);
   const [cateringLeads, setCateringLeads] = useState<CateringLead[]>(initialCateringLeads);
   const [savedCustomers, setSavedCustomers] = useState<SavedMealCustomer[]>(initialSavedCustomers);
+  const [academyLeads, setAcademyLeads] = useState<AcademyLead[]>([]);
+  const [academyJourneyFilter, setAcademyJourneyFilter] = useState('All');
+  const [academyStatusFilter, setAcademyStatusFilter] = useState('All');
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -669,6 +689,16 @@ function App() {
       .then(r => r.json())
       .then(d => {
         if (d) setSmtpStatus(d);
+      })
+      .catch(() => {});
+
+    // Academy Applications
+    adminFetch(`${API_BASE}/academy/applications`)
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d)) {
+          setAcademyLeads(d);
+        }
       })
       .catch(() => {});
   };
@@ -1532,6 +1562,18 @@ function App() {
     setCateringLeads(prev => prev.map(c => (c.id === id ? { ...c, status } : c)));
   };
 
+  const updateAcademyStatusDirect = async (id: string, status: AcademyLead['status']) => {
+    try {
+      await adminFetch(`${API_BASE}/academy/applications/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      notify(`Application status updated to "${status}".`);
+    } catch {}
+    setAcademyLeads(prev => prev.map(a => (a.id === id || a.refNumber === id ? { ...a, status } : a)));
+  };
+
   const openQuoteModal = (lead: CateringLead) => {
     setQuoteTargetLead(lead);
     setQuoteAmount(lead.budget ? lead.budget.replace(/[^0-9]/g, '') : '650000');
@@ -1653,6 +1695,9 @@ function App() {
                       )}
                       {item.label === 'Catering & events' && cateringLeads.length > 0 && (
                         <b>{cateringLeads.length}</b>
+                      )}
+                      {item.label === 'Culinary school' && academyLeads.filter(a => a.status === 'Pending Review').length > 0 && (
+                        <b>{academyLeads.filter(a => a.status === 'Pending Review').length}</b>
                       )}
                     </button>
                   );
@@ -1863,6 +1908,7 @@ function App() {
                 {section === 'Menu management' && 'Menu Management'}
                 {section === 'Catering & events' && 'Catering & Events'}
                 {section === 'Meal plans' && 'Meal Plans & Subscriptions'}
+                {section === 'Culinary school' && 'Culinary Arts Academy'}
                 {section === 'Messages' && 'Customer Messages'}
                 {section === 'Newsletter & broadcasts' && 'Newsletter & Email Broadcasts'}
                 {section === 'Saved meals & reminders' && 'Saved Meals & Automated Meal Reminders'}
@@ -1876,6 +1922,7 @@ function App() {
                 {section === 'Menu management' && 'Add dishes, update pricing, upload dish photos, and manage availability.'}
                 {section === 'Catering & events' && 'Manage high-value catering leads, corporate bookings, send quotes, and discuss menus.'}
                 {section === 'Meal plans' && 'Create and edit meal prep packages and freezer stocking subscriptions.'}
+                {section === 'Culinary school' && 'Review student admissions, journey selections, and connect directly with applicants.'}
                 {section === 'Messages' && 'Enquiries, reviews, and questions sent from the website contact forms.'}
                 {section === 'Newsletter & broadcasts' && 'Compose, preview, and dispatch rich HTML email campaigns to all website newsletter subscribers via Mailtrap live SMTP.'}
                 {section === 'Saved meals & reminders' && 'Dispatch manual bulk reminders to selected customers, or configure automated alerts for Breakfast, Lunch, Dinner, or Desserts.'}
@@ -3138,6 +3185,229 @@ function App() {
                   </table>
                 )}
               </div>
+            </section>
+          )}
+
+          {/* ========================================================= */}
+          {/* CULINARY ARTS ACADEMY MANAGEMENT */}
+          {/* ========================================================= */}
+          {section === 'Culinary school' && (
+            <section className="panel content-panel">
+              <div className="toolbar">
+                <div>
+                  <h3>Student Applications &amp; Admissions</h3>
+                  <p className="muted">Track applicants across the 3 Training Journeys, manage admissions, and connect on WhatsApp.</p>
+                </div>
+                <button className="secondary-btn" onClick={loadBackendData}>
+                  <Filter size={15} /> Refresh applications
+                </button>
+              </div>
+
+              {/* Academy Key Metric Cards */}
+              <div className="stats-row" style={{ marginTop: 8, marginBottom: 20 }}>
+                <div className="stat-card">
+                  <div className="stat-label">TOTAL APPLICANTS</div>
+                  <div className="stat-value">{academyLeads.length}</div>
+                  <small style={{ color: '#687c88' }}>Across all cohorts</small>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">3 MONTHS (FOUNDATION)</div>
+                  <div className="stat-value" style={{ color: '#0284c7' }}>
+                    {academyLeads.filter(a => a.journey === '3-months').length}
+                  </div>
+                  <small style={{ color: '#687c88' }}>₦280k Tuition</small>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">6 MONTHS (PRO DIPLOMA) ★</div>
+                  <div className="stat-value" style={{ color: 'var(--brand-red)' }}>
+                    {academyLeads.filter(a => a.journey === '6-months').length}
+                  </div>
+                  <small style={{ color: '#b45309', fontWeight: 700 }}>Most Popular · ₦490k</small>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">9 MONTHS (EXECUTIVE)</div>
+                  <div className="stat-value" style={{ color: '#d97706' }}>
+                    {academyLeads.filter(a => a.journey === '9-months').length}
+                  </div>
+                  <small style={{ color: '#687c88' }}>₦750k Masterclass</small>
+                </div>
+              </div>
+
+              {/* Filters Bar */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ position: 'relative', flex: '1', minWidth: 200 }}>
+                  <Search size={15} style={{ position: 'absolute', left: 10, top: 10, color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    placeholder="Search candidate by name, phone, or Ref code..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ paddingLeft: 32, width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <select
+                  value={academyJourneyFilter}
+                  onChange={e => setAcademyJourneyFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13 }}
+                >
+                  <option value="All">All Training Journeys</option>
+                  <option value="3-months">3 Months (Foundation)</option>
+                  <option value="6-months">6 Months (Pro Diploma)</option>
+                  <option value="9-months">9 Months (Executive Master)</option>
+                </select>
+
+                <select
+                  value={academyStatusFilter}
+                  onChange={e => setAcademyStatusFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13 }}
+                >
+                  <option value="All">All Admissions Statuses</option>
+                  <option value="Pending Review">Pending Review</option>
+                  <option value="Contacted">Contacted</option>
+                  <option value="Admitted">Admitted</option>
+                  <option value="Enrolled">Enrolled</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Applicants List */}
+              {academyLeads
+                .filter(a => {
+                  const matchSearch =
+                    !search.trim() ||
+                    a.fullName.toLowerCase().includes(search.toLowerCase()) ||
+                    a.phone.includes(search) ||
+                    (a.refNumber && a.refNumber.toLowerCase().includes(search.toLowerCase())) ||
+                    (a.email && a.email.toLowerCase().includes(search.toLowerCase()));
+                  const matchJourney = academyJourneyFilter === 'All' || a.journey === academyJourneyFilter;
+                  const matchStatus = academyStatusFilter === 'All' || a.status === academyStatusFilter;
+                  return matchSearch && matchJourney && matchStatus;
+                }).length === 0 ? (
+                <div className="empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                  <GraduationCap size={44} style={{ opacity: 0.35, marginBottom: 14, color: 'var(--brand-navy)' }} />
+                  <h3 style={{ fontSize: 17, color: 'var(--brand-navy)', marginBottom: 6 }}>No academy applicants found</h3>
+                  <p style={{ fontSize: 13, color: '#687c88', maxWidth: 450, margin: '0 auto' }}>
+                    Student enrollment applications submitted on the website form will appear here in real-time.
+                  </p>
+                </div>
+              ) : (
+                <div className="event-cards">
+                  {academyLeads
+                    .filter(a => {
+                      const matchSearch =
+                        !search.trim() ||
+                        a.fullName.toLowerCase().includes(search.toLowerCase()) ||
+                        a.phone.includes(search) ||
+                        (a.refNumber && a.refNumber.toLowerCase().includes(search.toLowerCase())) ||
+                        (a.email && a.email.toLowerCase().includes(search.toLowerCase()));
+                      const matchJourney = academyJourneyFilter === 'All' || a.journey === academyJourneyFilter;
+                      const matchStatus = academyStatusFilter === 'All' || a.status === academyStatusFilter;
+                      return matchSearch && matchJourney && matchStatus;
+                    })
+                    .map(a => {
+                      const phoneClean = a.phone.replace(/[^0-9]/g, '');
+                      const journeyLabel =
+                        a.journey === '3-months'
+                          ? '3 Months Foundation (₦280k)'
+                          : a.journey === '6-months'
+                          ? '6 Months Pro Diploma ★ (₦490k)'
+                          : '9 Months Executive Masterclass (₦750k)';
+
+                      const waMsg = encodeURIComponent(
+                        `Hello ${a.fullName}! This is Chef Margaret & the Admissions Team at Ma'Great Culinary Arts Academy. We received your application (${a.refNumber}) for the ${journeyLabel}. We're excited to guide your admission into our upcoming cohort!`
+                      );
+
+                      return (
+                        <div className="event-card-rich" key={a.id || a.refNumber}>
+                          <div className="event-card-rich-header">
+                            <div className="event-emoji">🎓</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <h3 style={{ margin: 0 }}>{a.fullName}</h3>
+                                  <span style={{ background: '#182838', color: '#fed485', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6 }}>
+                                    {a.refNumber || 'APPLICANT'}
+                                  </span>
+                                </div>
+
+                                <select
+                                  className={`status-select status-${a.status === 'Enrolled' || a.status === 'Admitted' ? 'delivered' : a.status === 'Contacted' ? 'ready' : 'new'}`}
+                                  value={a.status}
+                                  onChange={e => updateAcademyStatusDirect(a.id, e.target.value as AcademyLead['status'])}
+                                >
+                                  <option value="Pending Review">Pending Review</option>
+                                  <option value="Contacted">Contacted</option>
+                                  <option value="Admitted">Admitted</option>
+                                  <option value="Enrolled">Enrolled</option>
+                                  <option value="Cancelled">Cancelled</option>
+                                </select>
+                              </div>
+
+                              <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 12, color: '#687c88', flexWrap: 'wrap' }}>
+                                <span>📞 {a.phone}</span>
+                                {a.email && <span>✉️ {a.email}</span>}
+                                <span>📅 Applied: {new Date(a.appliedAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="event-meta-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', marginTop: 12 }}>
+                            <div className="meta-box">
+                              <small>PROGRAMME JOURNEY</small>
+                              <strong style={{ color: a.journey === '6-months' ? 'var(--brand-red)' : a.journey === '9-months' ? '#d97706' : 'var(--brand-navy)' }}>
+                                {journeyLabel}
+                              </strong>
+                            </div>
+
+                            <div className="meta-box">
+                              <small>STUDY SCHEDULE</small>
+                              <strong>
+                                {a.schedule === 'weekend-executive' ? 'Weekend Executive (Saturdays)' : 'Weekday Intensive (Tue & Thu)'}
+                              </strong>
+                            </div>
+
+                            <div className="meta-box">
+                              <small>EXPERIENCE LEVEL</small>
+                              <strong style={{ textTransform: 'capitalize' }}>{a.experience || 'Beginner'}</strong>
+                            </div>
+
+                            <div className="meta-box">
+                              <small>FREE STARTER KIT</small>
+                              <strong style={{ color: '#16a34a' }}>Knife Roll + Uniform + Secret Handout</strong>
+                            </div>
+                          </div>
+
+                          {a.notes && (
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#475569' }}>
+                              <strong style={{ display: 'block', color: 'var(--brand-navy)', marginBottom: 2 }}>Candidate Aspirations / Notes:</strong>
+                              "{a.notes}"
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', gap: 10, marginTop: 14, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            <a
+                              href={`https://wa.me/${phoneClean.startsWith('234') ? phoneClean : phoneClean.startsWith('0') ? '234' + phoneClean.slice(1) : '234' + phoneClean}?text=${waMsg}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="action-btn"
+                              style={{ background: '#25d366', color: '#ffffff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+                            >
+                              <MessageCircle size={14} /> WhatsApp Candidate
+                            </a>
+                            <a
+                              href={`tel:${a.phone}`}
+                              className="action-btn secondary"
+                              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            >
+                              <Phone size={14} /> Call Candidate
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </section>
           )}
 
