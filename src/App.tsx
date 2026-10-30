@@ -4322,52 +4322,135 @@ function App() {
               <section className="panel content-panel">
                 {/* KPI Metrics */}
                 <div className="tasting-kpi-grid">
-                  <div className="stat-card">
-                    <small>TOTAL TASTING LEADS</small>
-                    <div className="stat-val">{tastingRequests.length}</div>
-                    <span>Corporate Organizations</span>
+                  <div
+                    className={`tasting-kpi-card ${tastingStatusFilter === 'All' ? 'active' : ''}`}
+                    onClick={() => setTastingStatusFilter('All')}
+                    title="Click to view all corporate tasting requests"
+                  >
+                    <div className="tasting-kpi-icon navy">
+                      <Building size={22} />
+                    </div>
+                    <div className="tasting-kpi-content">
+                      <div className="tasting-kpi-label">
+                        <span>Total Leads</span>
+                      </div>
+                      <div className="tasting-kpi-val">{tastingRequests.length}</div>
+                      <div className="tasting-kpi-sub">Corporate Organizations</div>
+                    </div>
                   </div>
-                  <div className="stat-card">
-                    <small>PENDING REVIEW</small>
-                    <div className="stat-val" style={{ color: '#d97706' }}>{pendingCount}</div>
-                    <span>Awaiting Dispatch Setup</span>
+
+                  <div
+                    className={`tasting-kpi-card ${tastingStatusFilter === 'Pending' ? 'active' : ''}`}
+                    onClick={() => setTastingStatusFilter('Pending')}
+                    title="Click to filter by Pending"
+                  >
+                    <div className="tasting-kpi-icon amber">
+                      <Clock3 size={22} />
+                    </div>
+                    <div className="tasting-kpi-content">
+                      <div className="tasting-kpi-label">
+                        <span>Pending Review</span>
+                      </div>
+                      <div className="tasting-kpi-val" style={{ color: '#d97706' }}>{pendingCount}</div>
+                      <div className="tasting-kpi-sub">Awaiting Dispatch Setup</div>
+                    </div>
                   </div>
-                  <div className="stat-card">
-                    <small>CONFIRMED / SCHEDULED</small>
-                    <div className="stat-val" style={{ color: '#2563eb' }}>{scheduledCount}</div>
-                    <span>Tasting Sessions Booked</span>
+
+                  <div
+                    className={`tasting-kpi-card ${tastingStatusFilter === 'Scheduled' ? 'active' : ''}`}
+                    onClick={() => setTastingStatusFilter('Scheduled')}
+                    title="Click to filter by Scheduled"
+                  >
+                    <div className="tasting-kpi-icon blue">
+                      <Calendar size={22} />
+                    </div>
+                    <div className="tasting-kpi-content">
+                      <div className="tasting-kpi-label">
+                        <span>Confirmed</span>
+                      </div>
+                      <div className="tasting-kpi-val" style={{ color: '#2563eb' }}>{scheduledCount}</div>
+                      <div className="tasting-kpi-sub">Tasting Sessions Booked</div>
+                    </div>
                   </div>
-                  <div className="stat-card">
-                    <small>DELIVERED / SAMPLED</small>
-                    <div className="stat-val" style={{ color: '#16a34a' }}>{deliveredCount}</div>
-                    <span>Converted &amp; Follow-up</span>
+
+                  <div
+                    className={`tasting-kpi-card ${tastingStatusFilter === 'Delivered' ? 'active' : ''}`}
+                    onClick={() => setTastingStatusFilter('Delivered')}
+                    title="Click to filter by Delivered"
+                  >
+                    <div className="tasting-kpi-icon green">
+                      <PackageCheck size={22} />
+                    </div>
+                    <div className="tasting-kpi-content">
+                      <div className="tasting-kpi-label">
+                        <span>Delivered</span>
+                      </div>
+                      <div className="tasting-kpi-val" style={{ color: '#059669' }}>{deliveredCount}</div>
+                      <div className="tasting-kpi-sub">Converted &amp; Follow-up</div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Toolbar */}
-                <div className="toolbar">
-                  <div className="search-field">
-                    <Search size={16} />
+                {/* Modern Toolbar */}
+                <div className="tasting-toolbar-bar">
+                  <div className="tasting-search-box">
+                    <Search size={16} color="#94a3b8" />
                     <input
-                      placeholder="Search company, contact person, meals, location..."
+                      placeholder="Search company, contact person, dishes, location..."
                       value={tastingSearch}
                       onChange={e => setTastingSearch(e.target.value)}
                     />
+                    {tastingSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setTastingSearch('')}
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0, color: '#94a3b8' }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
 
-                  <select
-                    value={tastingStatusFilter}
-                    onChange={e => setTastingStatusFilter(e.target.value as any)}
-                  >
-                    <option value="All">All Statuses ({tastingRequests.length})</option>
-                    <option value="Pending">Pending ({pendingCount})</option>
-                    <option value="Scheduled">Scheduled ({scheduledCount})</option>
-                    <option value="Delivered">Delivered ({deliveredCount})</option>
-                    <option value="Declined">Declined</option>
-                  </select>
+                  <div className="tasting-filter-chips">
+                    <button
+                      type="button"
+                      className={`tasting-filter-chip ${tastingStatusFilter === 'All' ? 'active' : ''}`}
+                      onClick={() => setTastingStatusFilter('All')}
+                    >
+                      All <span className="tasting-filter-chip-count">{tastingRequests.length}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`tasting-filter-chip ${tastingStatusFilter === 'Pending' ? 'active' : ''}`}
+                      onClick={() => setTastingStatusFilter('Pending')}
+                    >
+                      Pending <span className="tasting-filter-chip-count">{pendingCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`tasting-filter-chip ${tastingStatusFilter === 'Scheduled' ? 'active' : ''}`}
+                      onClick={() => setTastingStatusFilter('Scheduled')}
+                    >
+                      Scheduled <span className="tasting-filter-chip-count">{scheduledCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`tasting-filter-chip ${tastingStatusFilter === 'Delivered' ? 'active' : ''}`}
+                      onClick={() => setTastingStatusFilter('Delivered')}
+                    >
+                      Delivered <span className="tasting-filter-chip-count">{deliveredCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`tasting-filter-chip ${tastingStatusFilter === 'Declined' ? 'active' : ''}`}
+                      onClick={() => setTastingStatusFilter('Declined')}
+                    >
+                      Declined
+                    </button>
+                  </div>
 
-                  <button className="secondary-btn" onClick={loadBackendData} title="Fetch latest tasting requests">
-                    Refresh
+                  <button className="tasting-refresh-btn" onClick={loadBackendData} title="Fetch latest tasting requests">
+                    <Filter size={14} /> Refresh
                   </button>
                 </div>
 
@@ -4389,36 +4472,49 @@ function App() {
                       {filteredTastingRequests.map(t => (
                         <tr key={t.id}>
                           <td>
-                            <strong style={{ color: '#c6381e', fontSize: 12 }}>#{t.id}</strong>
-                            <div style={{ fontSize: 11, color: '#8b96a2', marginTop: 2 }}>
-                              {new Date(t.createdAt).toLocaleDateString()}
+                            <strong style={{ color: 'var(--brand-red)', fontSize: 12, fontWeight: 700 }}>#{t.id}</strong>
+                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>
+                              {new Date(t.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 800, color: 'var(--brand-navy)' }}>{t.companyName}</div>
-                            <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>{t.contactPerson}</div>
-                            <div style={{ fontSize: 11, color: '#64748b' }}>
-                              <a href={`tel:${t.contactPhone}`} style={{ color: '#182838', textDecoration: 'none' }}>{t.contactPhone}</a> &bull; {t.companyEmail}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div className="tasting-company-avatar">
+                                {t.companyName?.slice(0, 2).toUpperCase() || 'CO'}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 800, color: 'var(--brand-navy)', fontSize: 13.5 }}>{t.companyName}</div>
+                                <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>{t.contactPerson}</div>
+                                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>
+                                  <a href={`tel:${t.contactPhone}`} style={{ color: '#182838', textDecoration: 'none', fontWeight: 600 }}>{t.contactPhone}</a> &bull; {t.companyEmail}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 700, color: '#182838' }}>{t.guestCount} People</div>
-                            <div style={{ fontSize: 12, color: '#64748b' }}>{t.mealCount} Courses</div>
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 3 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>
+                                👥 {t.guestCount} Tasters
+                              </span>
+                              <span style={{ fontSize: 11, color: '#64748b' }}>
+                                🍽️ {t.mealCount} Courses
+                              </span>
+                            </div>
                           </td>
                           <td style={{ maxWidth: 260 }}>
                             <div className="tasting-card-meals-box">
                               {t.mealSelections}
                             </div>
                             {t.notes && (
-                              <div style={{ fontSize: 11, color: '#d97706', marginTop: 4 }}>
+                              <div style={{ fontSize: 11, color: '#d97706', marginTop: 4, background: '#fffbeb', padding: '3px 8px', borderRadius: 4 }}>
                                 <b>Note:</b> {t.notes}
                               </div>
                             )}
                           </td>
                           <td>
-                            <div style={{ fontWeight: 600, color: '#182838' }}>{t.location}</div>
-                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                              📅 {t.preferredDate} ({t.preferredTime})
+                            <div style={{ fontWeight: 600, color: '#182838', fontSize: 12.5 }}>📍 {t.location}</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>
+                              📅 {t.preferredDate} &bull; {t.preferredTime}
                             </div>
                           </td>
                           <td>
@@ -4466,11 +4562,29 @@ function App() {
                   </table>
 
                   {filteredTastingRequests.length === 0 && (
-                    <div className="empty-state" style={{ padding: 40, textAlign: 'center' }}>
-                      <p>No corporate tasting requests match your current filters.</p>
-                      <button className="secondary-btn" onClick={() => { setTastingSearch(''); setTastingStatusFilter('All'); }}>
-                        Reset filters
-                      </button>
+                    <div className="tasting-empty-card">
+                      <div className="tasting-empty-icon-wrap">
+                        <Building size={28} />
+                      </div>
+                      <h3>No Corporate Tasting Requests Found</h3>
+                      <p>
+                        {tastingSearch || tastingStatusFilter !== 'All'
+                          ? 'No requests match your search or selected filter criteria.'
+                          : 'When corporate teams request complimentary meal tasting boxes from your website, their requests will appear here instantly for review, menu approval, and dispatch scheduling.'}
+                      </p>
+                      {tastingSearch || tastingStatusFilter !== 'All' ? (
+                        <button
+                          className="secondary-btn"
+                          onClick={() => { setTastingSearch(''); setTastingStatusFilter('All'); }}
+                        >
+                          Clear all filters
+                        </button>
+                      ) : (
+                        <div className="tasting-empty-live-pill">
+                          <span className="pulse-dot"></span>
+                          Live corporate lead listener active
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
