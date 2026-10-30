@@ -181,7 +181,7 @@ export type Food = {
   name: string;
   category: string;
   price: number;
-  status: 'Available' | 'Sold out';
+  status: 'Available' | 'Sold out' | 'Hidden';
   orders: number;
   image: string;
   description?: string;
@@ -189,6 +189,7 @@ export type Food = {
   rating?: string;
   time?: string;
   availableLocations?: string[];
+  hidden?: boolean;
 };
 
 export type Order = {
@@ -341,12 +342,13 @@ const initialFoods: Food[] = defaultFoods.map((f: any) => ({
   category: f.category || 'Nigerian',
   price: f.price,
   status: (f.status as any) || 'Available',
-  orders: f.ordersCount || 0,
+  orders: 0,
   image: f.image || FALLBACK_FOOD_IMG,
   description: f.description,
   tag: f.tag,
   rating: f.rating || '4.9',
-  time: f.time || '25–35 min'
+  time: f.time || '25–35 min',
+  availableLocations: Array.isArray(f.availableLocations) ? f.availableLocations : []
 }));
 
 const initialOrders: Order[] = [];
@@ -723,7 +725,8 @@ function App() {
   const [foodTag, setFoodTag] = useState('');
   const [foodDescription, setFoodDescription] = useState('');
   const [foodImage, setFoodImage] = useState('');
-  const [foodStatus, setFoodStatus] = useState<'Available' | 'Sold out'>('Available');
+  const [foodStatus, setFoodStatus] = useState<'Available' | 'Sold out' | 'Hidden'>('Available');
+  const [menuStatusFilter, setMenuStatusFilter] = useState<'All' | 'Available' | 'Sold out' | 'Hidden'>('All');
   const [uploadingFoodImg, setUploadingFoodImg] = useState(false);
   const [foodAvailableLocations, setFoodAvailableLocations] = useState<string[]>([]);
 
@@ -1019,8 +1022,8 @@ function App() {
   const loadBackendData = async () => {
     pingHealth();
 
-    // Menu
-    adminFetch(`${API_BASE}/menu`)
+    // Menu (fetch all dishes including hidden for admin management)
+    adminFetch(`${API_BASE}/menu?all=true`)
       .then(r => r.json())
       .then(foodData => {
         if (Array.isArray(foodData) && foodData.length > 0) {
@@ -1032,7 +1035,7 @@ function App() {
               category: f.category || 'Nigerian',
               price: f.price,
               status: f.status || 'Available',
-              orders: f.ordersCount || f.orders || 0,
+              orders: 0,
               image: f.image || FALLBACK_FOOD_IMG,
               description: f.description,
               tag: f.tag,
@@ -1513,12 +1516,13 @@ function App() {
   // Filtered foods for menu management
   const filteredFoods = useMemo(
     () =>
-      foods.filter(
-        f =>
-          (f.name + ' ' + f.category + ' ' + (f.tag || '')).toLowerCase().includes(search.toLowerCase()) &&
-          (filter === 'All' || f.category.toLowerCase() === filter.toLowerCase())
-      ),
-    [foods, search, filter]
+      foods.filter(f => {
+        const matchesSearch = (f.name + ' ' + f.category + ' ' + (f.tag || '')).toLowerCase().includes(search.toLowerCase());
+        const matchesCategory = filter === 'All' || f.category.toLowerCase() === filter.toLowerCase();
+        const matchesStatus = menuStatusFilter === 'All' || f.status === menuStatusFilter;
+        return matchesSearch && matchesCategory && matchesStatus;
+      }),
+    [foods, search, filter, menuStatusFilter]
   );
 
   // Filtered corporate tasting requests
@@ -1538,10 +1542,11 @@ function App() {
     });
   }, [tastingRequests, tastingSearch, tastingStatusFilter]);
 
-  // Dynamic metrics for Overview & Analytics
-  const grossRevenue = useMemo(() => orders.reduce((sum, o) => sum + (o.total || 0), 0), [orders]);
+  // Dynamic metrics for Overview & Analytics (Finances strictly reflect confirmed payments)
+  const paidOrders = useMemo(() => orders.filter(o => o.paymentStatus === 'paid'), [orders]);
+  const grossRevenue = useMemo(() => paidOrders.reduce((sum, o) => sum + (o.total || 0), 0), [paidOrders]);
   const deliveredCount = useMemo(() => orders.filter(o => o.status === 'Delivered').length, [orders]);
-  const averageOrderValue = useMemo(() => (orders.length > 0 ? Math.round(grossRevenue / orders.length) : 0), [orders, grossRevenue]);
+  const averageOrderValue = useMemo(() => (paidOrders.length > 0 ? Math.round(grossRevenue / paidOrders.length) : 0), [paidOrders, grossRevenue]);
 
   const categoryStats = useMemo(() => {
     const total = foods.length || 1;
@@ -1558,25 +1563,38 @@ function App() {
     ];
   }, [foods]);
 
-  // Top performing signature dishes calculated in real time from orders
-  const topDishes = useMemo(() => {
-    const dishCountMap: Record<string, number> = {};
+  // Real-time count of orders per dish calculated strictly from actual customer orders (zero mock numbers)
+  const dishOrderCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
     orders.forEach(o => {
       if (Array.isArray(o.items)) {
         o.items.forEach((item: any) => {
           const name = (item.name || '').trim().toLowerCase();
           if (name) {
-            dishCountMap[name] = (dishCountMap[name] || 0) + (Number(item.quantity) || 1);
+            map[name] = (map[name] || 0) + (Number(item.quantity) || 1);
           }
         });
       }
     });
+    return map;
+  }, [orders]);
 
-    return [...foods].map(f => {
-      const liveOrders = dishCountMap[f.name.trim().toLowerCase()] ?? f.orders ?? 0;
+  // Top performing signature dishes calculated in real time strictly from actual orders
+  const topDishes = useMemo(() => {
+    const dishesWithLiveCounts = foods.map(f => {
+      const liveOrders = dishOrderCountMap[f.name.trim().toLowerCase()] || 0;
       return { ...f, orders: liveOrders };
-    }).sort((a, b) => (b.orders || 0) - (a.orders || 0)).slice(0, 6);
-  }, [foods, orders]);
+    });
+
+    const hasAnyOrders = dishesWithLiveCounts.some(d => (d.orders || 0) > 0);
+    if (!hasAnyOrders) {
+      return dishesWithLiveCounts.slice(0, 6);
+    }
+
+    return dishesWithLiveCounts
+      .sort((a, b) => (b.orders || 0) - (a.orders || 0))
+      .slice(0, 6);
+  }, [foods, dishOrderCountMap]);
 
   // Global search quick hits for topbar
   const searchResults = useMemo(() => {
@@ -1631,6 +1649,7 @@ function App() {
       description: foodDescription.trim() || `Authentic signature ${foodCategory} dish.`,
       image: foodImage.trim() || FALLBACK_FOOD_IMG,
       status: foodStatus,
+      hidden: foodStatus === 'Hidden',
       availableLocations: foodAvailableLocations
     };
 
@@ -1867,7 +1886,24 @@ function App() {
       await adminFetch(`${API_BASE}/menu/${f.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
+        body: JSON.stringify({ status: nextStatus, hidden: false })
+      });
+    } catch (err) {
+      console.warn('Backend sync:', err);
+    }
+  };
+
+  const toggleFoodHidden = async (f: Food) => {
+    const isHidden = f.status === 'Hidden';
+    const nextStatus: 'Available' | 'Hidden' = isHidden ? 'Available' : 'Hidden';
+    setFoods(prev => prev.map(item => (item.id === f.id ? { ...item, status: nextStatus } : item)));
+    notify(isHidden ? `"${f.name}" is now visible to the public on the order page.` : `"${f.name}" is now hidden from the public order page.`);
+
+    try {
+      await adminFetch(`${API_BASE}/menu/${f.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus, hidden: nextStatus === 'Hidden' })
       });
     } catch (err) {
       console.warn('Backend sync:', err);
@@ -3129,10 +3165,10 @@ function App() {
                       </div>
                       <span className="stat-change up">+18%</span>
                     </div>
-                    <p>Gross revenue (Real-time)</p>
-                    <strong className="stat-value">{money(orders.reduce((sum, o) => sum + (o.total || 0), 0))}</strong>
+                    <p>Gross revenue (Confirmed Payments)</p>
+                    <strong className="stat-value">{money(grossRevenue)}</strong>
                     <div className="stat-bottom">
-                      <small>{orders.length} orders recorded</small>
+                      <small>{paidOrders.length} verified paid orders</small>
                     </div>
                   </div>
                 ) : (
@@ -3363,6 +3399,17 @@ function App() {
                             <td>{o.date}</td>
                             <td>
                               <strong>{money(o.total)}</strong>
+                              <div style={{ marginTop: 4 }}>
+                                {o.paymentStatus === 'paid' ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.12)', border: '1px solid rgba(22,163,74,0.25)', padding: '2px 7px', borderRadius: 12 }}>
+                                    ✓ Paid
+                                  </span>
+                                ) : (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)', padding: '2px 7px', borderRadius: 12 }}>
+                                    ⏳ {o.paymentStatus || 'Pending'}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td>
                               <select
@@ -3491,7 +3538,7 @@ function App() {
           {/* ========================================================= */}
           {section === 'Menu management' && (
             <section className="panel content-panel">
-              <div className="toolbar">
+              <div className="toolbar" style={{ flexWrap: 'wrap', gap: 10 }}>
                 <div className="search-field">
                   <Search size={16} />
                   <input
@@ -3510,7 +3557,40 @@ function App() {
                   <option value="Asian">Asian</option>
                   <option value="Pastries & Snacks">Pastries & Snacks</option>
                 </select>
-                <button className="primary-btn" onClick={openAddFoodModal}>
+
+                {/* Quick Status & Visibility Filter Pills */}
+                <div className="status-pill-group">
+                  <button
+                    type="button"
+                    className={`status-pill-btn ${menuStatusFilter === 'All' ? 'active' : ''}`}
+                    onClick={() => setMenuStatusFilter('All')}
+                  >
+                    All ({foods.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`status-pill-btn ${menuStatusFilter === 'Available' ? 'active' : ''}`}
+                    onClick={() => setMenuStatusFilter('Available')}
+                  >
+                    Available ({foods.filter(f => f.status === 'Available').length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`status-pill-btn ${menuStatusFilter === 'Sold out' ? 'active' : ''}`}
+                    onClick={() => setMenuStatusFilter('Sold out')}
+                  >
+                    Sold out ({foods.filter(f => f.status === 'Sold out').length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`status-pill-btn ${menuStatusFilter === 'Hidden' ? 'active' : ''}`}
+                    onClick={() => setMenuStatusFilter('Hidden')}
+                  >
+                    <EyeOff size={12} /> Hidden ({foods.filter(f => f.status === 'Hidden').length})
+                  </button>
+                </div>
+
+                <button className="primary-btn" onClick={openAddFoodModal} style={{ marginLeft: 'auto' }}>
                   <Plus size={15} /> Add menu item
                 </button>
               </div>
@@ -3518,7 +3598,7 @@ function App() {
               {/* Dish Cards Grid */}
               <div className="menu-grid">
                 {filteredFoods.map(f => (
-                  <div className="food-card" key={f.id}>
+                  <div className={`food-card ${f.status === 'Hidden' ? 'dish-card-hidden' : ''}`} key={f.id}>
                     <div className="food-photo">
                       <img
                         src={resolveMealImage(f.image)}
@@ -3527,8 +3607,8 @@ function App() {
                           e.currentTarget.src = FALLBACK_FOOD_IMG;
                         }}
                       />
-                      <span className={`status ${f.status === 'Available' ? 'status-green' : 'status-red'}`}>
-                        {f.status}
+                      <span className={`status ${f.status === 'Available' ? 'status-green' : f.status === 'Hidden' ? 'status-amber' : 'status-red'}`}>
+                        {f.status === 'Hidden' ? 'Hidden from public' : f.status}
                       </span>
                       {f.tag && <span className="food-badge-tag">{f.tag}</span>}
                       <div className="food-menu-container">
@@ -3553,6 +3633,23 @@ function App() {
                             >
                               <span className={`status-indicator ${f.status === 'Available' ? 'sold' : 'avail'}`} />
                               {f.status === 'Available' ? 'Mark as Sold out' : 'Mark as Available'}
+                            </button>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                toggleFoodHidden(f);
+                                setOpenFoodMenuId(null);
+                              }}
+                            >
+                              {f.status === 'Hidden' ? (
+                                <>
+                                  <Eye size={14} color="#166534" /> Show on public menu
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff size={14} color="#b45309" /> Hide from public
+                                </>
+                              )}
                             </button>
                             <button
                               className="dropdown-item"
@@ -3614,11 +3711,27 @@ function App() {
                             ? 'All Lagos'
                             : `${f.availableLocations.length} Lagos ${f.availableLocations.length === 1 ? 'location' : 'locations'}`}
                         </span>
+                        {f.status === 'Hidden' && (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '2px 7px',
+                            borderRadius: 4,
+                            background: '#fef3c7',
+                            color: '#92400e',
+                            border: '1px solid #fde68a'
+                          }}>
+                            <EyeOff size={10} /> Hidden from public
+                          </span>
+                        )}
                       </div>
 
                       <div className="food-card-foot">
                         <strong>{money(f.price)}</strong>
-                        <span>{f.orders || 0} orders</span>
+                        <span>{dishOrderCountMap[f.name.trim().toLowerCase()] || 0} orders</span>
                       </div>
 
                       <div className="food-actions">
@@ -3926,6 +4039,17 @@ function App() {
                             <td>{o.date}</td>
                             <td>
                               <strong>{money(o.total)}</strong>
+                              <div style={{ marginTop: 4 }}>
+                                {o.paymentStatus === 'paid' ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.12)', border: '1px solid rgba(22,163,74,0.25)', padding: '2px 7px', borderRadius: 12 }}>
+                                    ✓ Paid ({o.paymentMethod || 'Paystack'})
+                                  </span>
+                                ) : (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)', padding: '2px 7px', borderRadius: 12 }}>
+                                    ⏳ {o.paymentStatus || 'Pending'}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td>
                               <select
