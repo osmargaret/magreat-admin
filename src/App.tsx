@@ -58,7 +58,9 @@ import {
   ShieldAlert,
   Table as TableIcon,
   LayoutGrid,
-  MapPin
+  MapPin,
+  Star,
+  Package
 } from 'lucide-react';
 import { defaultFoods } from './data/menuData';
 
@@ -119,7 +121,9 @@ type Section =
   | 'Overview'
   | 'Orders'
   | 'Menu management'
+  | 'Delivery locations'
   | 'Catering & events'
+  | 'Tasting requests'
   | 'Meal plans'
   | 'Culinary school'
   | 'Messages'
@@ -128,6 +132,17 @@ type Section =
   | 'Analytics'
   | 'Customers'
   | 'Settings';
+
+export type DeliveryLocation = {
+  id: string;
+  name: string;
+  zone: string;
+  state: 'Lagos';
+  deliveryFee: number;
+  estimatedTime: string;
+  isActive: boolean;
+  createdAt?: string;
+};
 
 export type AcademyLead = {
   id: string;
@@ -173,6 +188,7 @@ export type Food = {
   tag?: string;
   rating?: string;
   time?: string;
+  availableLocations?: string[];
 };
 
 export type Order = {
@@ -245,7 +261,43 @@ export type CateringLead = {
   dietaryRequirements?: string;
   notes?: string;
   status: 'Pending' | 'Quote sent' | 'Confirmed' | 'Declined';
+  quoteAmount?: number;
+  menuNotes?: string;
+  confirmedAt?: string;
 };
+
+export interface SignatureDish {
+  id: string;
+  foodId?: number;
+  name: string;
+  tag: string;
+  price?: number;
+  description?: string;
+  image: string;
+  local?: string;
+  alt?: string;
+  order?: number;
+  createdAt?: string;
+}
+
+export interface TastingRequest {
+  id: string;
+  companyName: string;
+  contactPerson: string;
+  contactPhone: string;
+  companyEmail: string;
+  guestCount: number;
+  mealCount: number;
+  mealSelections: string;
+  location: string;
+  preferredDate: string;
+  preferredTime: string;
+  notes?: string;
+  status: 'Pending' | 'Scheduled' | 'Delivered' | 'Declined';
+  adminNotes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 export type SavedMealCustomer = {
   id: string;
@@ -388,11 +440,26 @@ const initialAcademyLeads: AcademyLead[] = [
   }
 ];
 
+const initialLagosLocations: DeliveryLocation[] = [
+  { id: 'lekki-phase-1', name: 'Lekki Phase 1', zone: 'Island & Lekki Axis', state: 'Lagos', deliveryFee: 2000, estimatedTime: '20–35 min', isActive: true },
+  { id: 'victoria-island', name: 'Victoria Island (VI)', zone: 'Lagos Island', state: 'Lagos', deliveryFee: 2500, estimatedTime: '25–40 min', isActive: true },
+  { id: 'ikoyi', name: 'Ikoyi & Banana Island', zone: 'Lagos Island', state: 'Lagos', deliveryFee: 2500, estimatedTime: '25–40 min', isActive: true },
+  { id: 'ikeja-gra', name: 'Ikeja GRA & Alausa', zone: 'Lagos Mainland', state: 'Lagos', deliveryFee: 3000, estimatedTime: '30–45 min', isActive: true },
+  { id: 'surulere', name: 'Surulere', zone: 'Lagos Mainland', state: 'Lagos', deliveryFee: 2500, estimatedTime: '30–45 min', isActive: true },
+  { id: 'yaba', name: 'Yaba & Akoka', zone: 'Lagos Mainland', state: 'Lagos', deliveryFee: 2500, estimatedTime: '25–40 min', isActive: true },
+  { id: 'ajah', name: 'Ajah & Sangotedo', zone: 'Lekki-Epe Axis', state: 'Lagos', deliveryFee: 3000, estimatedTime: '35–50 min', isActive: true },
+  { id: 'maryland', name: 'Maryland & Anthony', zone: 'Lagos Mainland', state: 'Lagos', deliveryFee: 2800, estimatedTime: '30–45 min', isActive: true },
+  { id: 'magodo', name: 'Magodo Phase 1 & 2', zone: 'Lagos Mainland', state: 'Lagos', deliveryFee: 3200, estimatedTime: '35–50 min', isActive: true },
+  { id: 'gbagada', name: 'Gbagada', zone: 'Lagos Mainland', state: 'Lagos', deliveryFee: 2500, estimatedTime: '25–40 min', isActive: true }
+];
+
 const nav: { label: Section; icon: any; group: string; count?: number }[] = [
   { label: 'Overview', icon: LayoutDashboard, group: 'WORKSPACE' },
   { label: 'Orders', icon: ShoppingBag, group: 'WORKSPACE' },
   { label: 'Menu management', icon: UtensilsCrossed, group: 'WORKSPACE' },
+  { label: 'Delivery locations', icon: MapPin, group: 'WORKSPACE' },
   { label: 'Catering & events', icon: CalendarDays, group: 'WORKSPACE' },
+  { label: 'Tasting requests', icon: Package, group: 'WORKSPACE' },
   { label: 'Meal plans', icon: Snowflake, group: 'WORKSPACE' },
   { label: 'Culinary school', icon: GraduationCap, group: 'WORKSPACE' },
   { label: 'Messages', icon: MessageSquare, group: 'ENGAGE' },
@@ -404,6 +471,160 @@ const nav: { label: Section; icon: any; group: string; count?: number }[] = [
 ];
 
 const money = (n: number) => '₦' + (n || 0).toLocaleString('en-NG');
+
+function LocationMealAssignForm({
+  location,
+  foods,
+  onSave,
+  onCancel,
+  isSaving
+}: {
+  location: DeliveryLocation;
+  foods: Food[];
+  onSave: (locId: string, assignedIds: number[]) => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) {
+  const [selectedIds, setSelectedIds] = useState<number[]>(() => {
+    return foods
+      .filter(f => !f.availableLocations || f.availableLocations.length === 0 || f.availableLocations.includes(location.id))
+      .map(f => f.id);
+  });
+  const [query, setQuery] = useState('');
+  const [catFilter, setCatFilter] = useState('All');
+
+  const filtered = foods.filter(f => {
+    const q = query.toLowerCase().trim();
+    const matchQ = !q || f.name.toLowerCase().includes(q) || f.category.toLowerCase().includes(q);
+    const matchC = catFilter === 'All' || f.category === catFilter;
+    return matchQ && matchC;
+  });
+
+  const toggleDish = (id: number) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(prev => prev.filter(x => x !== id));
+    } else {
+      setSelectedIds(prev => [...prev, id]);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={e => {
+        e.preventDefault();
+        onSave(location.id, selectedIds);
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="secondary-btn"
+            style={{ fontSize: 11, padding: '5px 10px' }}
+            onClick={() => setSelectedIds(foods.map(f => f.id))}
+          >
+            ✓ Select All ({foods.length})
+          </button>
+          <button
+            type="button"
+            className="secondary-btn"
+            style={{ fontSize: 11, padding: '5px 10px' }}
+            onClick={() => setSelectedIds([])}
+          >
+            ✕ Clear All
+          </button>
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-red)' }}>
+          {selectedIds.length} of {foods.length} dishes enabled
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input
+          type="text"
+          placeholder="Filter dishes..."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          style={{ flex: 2, padding: '6px 10px', fontSize: 12 }}
+        />
+        <select
+          value={catFilter}
+          onChange={e => setCatFilter(e.target.value)}
+          style={{ flex: 1, padding: '6px 8px', fontSize: 12 }}
+        >
+          <option value="All">All Categories</option>
+          <option value="Nigerian">Nigerian</option>
+          <option value="Soups & Swallows">Soups & Swallows</option>
+          <option value="Grills & Proteins">Grills & Proteins</option>
+          <option value="Breakfast">Breakfast</option>
+          <option value="Continental">Continental</option>
+          <option value="Asian">Asian</option>
+          <option value="Pastries & Snacks">Pastries & Snacks</option>
+        </select>
+      </div>
+
+      <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {filtered.map(f => {
+          const checked = selectedIds.includes(f.id);
+          return (
+            <label
+              key={f.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '8px 10px',
+                borderRadius: 6,
+                background: checked ? '#f0fdf4' : '#ffffff',
+                border: checked ? '1px solid #bbf7d0' : '1px solid #f1f5f9',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleDish(f.id)}
+                style={{ width: 17, height: 17, cursor: 'pointer' }}
+              />
+              <img
+                src={resolveMealImage(f.image)}
+                alt={f.name}
+                style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }}
+                onError={e => { e.currentTarget.src = FALLBACK_FOOD_IMG; }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong style={{ display: 'block', fontSize: 13, color: 'var(--brand-navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {f.name}
+                </strong>
+                <span style={{ fontSize: 11, color: '#64748b' }}>
+                  {f.category} • ₦{(f.price || 0).toLocaleString()}
+                </span>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: checked ? '#166534' : '#94a3b8' }}>
+                {checked ? 'Available' : 'Unavailable'}
+              </span>
+            </label>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, margin: '20px 0' }}>
+            No dishes match filter
+          </p>
+        )}
+      </div>
+
+      <div className="modal-actions" style={{ marginTop: 16 }}>
+        <button type="button" className="secondary-btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="primary-btn" disabled={isSaving}>
+          {isSaving ? 'Saving...' : `Save for ${location.name}`}
+        </button>
+      </div>
+    </form>
+  );
+}
 
 function App() {
   const [section, setSection] = useState<Section>('Overview');
@@ -444,6 +665,24 @@ function App() {
   const [cateringSearch, setCateringSearch] = useState('');
   const [cateringStatusFilter, setCateringStatusFilter] = useState<'All' | CateringLead['status']>('All');
   const [cateringViewMode, setCateringViewMode] = useState<'table' | 'cards'>('table');
+
+  // Signature Dishes State
+  const [signatureDishes, setSignatureDishes] = useState<SignatureDish[]>([]);
+  const [menuSubTab, setMenuSubTab] = useState<'all' | 'signature'>('all');
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [editingSignatureDish, setEditingSignatureDish] = useState<SignatureDish | null>(null);
+  const [sigDishName, setSigDishName] = useState('');
+  const [sigDishTag, setSigDishTag] = useState("Chef's Pride");
+  const [sigDishPrice, setSigDishPrice] = useState('');
+  const [sigDishDescription, setSigDishDescription] = useState('');
+  const [sigDishImage, setSigDishImage] = useState('');
+  const [sigSelectedFoodId, setSigSelectedFoodId] = useState<number | ''>('');
+
+  // Corporate Tasting Requests State
+  const [tastingRequests, setTastingRequests] = useState<TastingRequest[]>([]);
+  const [tastingSearch, setTastingSearch] = useState('');
+  const [tastingStatusFilter, setTastingStatusFilter] = useState<'All' | TastingRequest['status']>('All');
+  const [selectedTastingDrawer, setSelectedTastingDrawer] = useState<TastingRequest | null>(null);
 
   // Modals & Drawers state
   const [showAddFood, setShowAddFood] = useState(false);
@@ -486,6 +725,22 @@ function App() {
   const [foodImage, setFoodImage] = useState('');
   const [foodStatus, setFoodStatus] = useState<'Available' | 'Sold out'>('Available');
   const [uploadingFoodImg, setUploadingFoodImg] = useState(false);
+  const [foodAvailableLocations, setFoodAvailableLocations] = useState<string[]>([]);
+
+  // Delivery Locations State (Places within Lagos State Only)
+  const [deliveryLocations, setDeliveryLocations] = useState<DeliveryLocation[]>(initialLagosLocations);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<DeliveryLocation | null>(null);
+  const [locName, setLocName] = useState('');
+  const [locZone, setLocZone] = useState('Lagos Island');
+  const [locDeliveryFee, setLocDeliveryFee] = useState('2500');
+  const [locEstimatedTime, setLocEstimatedTime] = useState('25–40 min');
+  const [locIsActive, setLocIsActive] = useState(true);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationZoneFilter, setLocationZoneFilter] = useState('All');
+  const [mealAssignLocation, setMealAssignLocation] = useState<DeliveryLocation | null>(null);
+  const [isSavingMealLocations, setIsSavingMealLocations] = useState(false);
 
   // Form states: Meal Plan Add/Edit
   const [planName, setPlanName] = useState('');
@@ -553,6 +808,14 @@ function App() {
   const [settingsDeliveryFee, setSettingsDeliveryFee] = useState(String(savedLocalSettings?.deliveryFee || '2000'));
   const [settingsOpeningHours, setSettingsOpeningHours] = useState(savedLocalSettings?.openingHours || '8:00 AM – 10:00 PM Daily');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [cateringServicePrices, setCateringServicePrices] = useState<Array<{
+    id: string; label: string; pricePerGuest: number; description?: string;
+  }>>([
+    { id: 'buffet', label: 'Grand Buffet Feast', pricePerGuest: 8500 },
+    { id: 'plated', label: 'Plated VIP 3-Course Banquet', pricePerGuest: 14000 },
+    { id: 'cocktail', label: 'Cocktail & Grill Bar', pricePerGuest: 5500 }
+  ]);
+  const [isSavingCateringPrices, setIsSavingCateringPrices] = useState(false);
 
   const sectionRef = useRef(section);
   useEffect(() => {
@@ -774,12 +1037,23 @@ function App() {
               description: f.description,
               tag: f.tag,
               rating: f.rating || '4.9',
-              time: f.time || '25–35 min'
+              time: f.time || '25–35 min',
+              availableLocations: Array.isArray(f.availableLocations) ? f.availableLocations : []
             }))
           );
         }
       })
-      .catch(() => {});
+      .catch(() => { });
+
+    // Delivery Locations (Lagos State Only)
+    adminFetch(`${API_BASE}/locations?all=true`)
+      .then(r => r.json())
+      .then(locData => {
+        if (Array.isArray(locData) && locData.length > 0) {
+          setDeliveryLocations(locData);
+        }
+      })
+      .catch(() => { });
 
     // Orders
     adminFetch(`${API_BASE}/orders`)
@@ -808,7 +1082,7 @@ function App() {
           );
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Catering Leads
     adminFetch(`${API_BASE}/catering`)
@@ -819,7 +1093,27 @@ function App() {
           setCateringLeads(catData);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
+
+    // Signature Dishes
+    adminFetch(`${API_BASE}/signature-dishes`)
+      .then(r => r.json())
+      .then(sigData => {
+        if (Array.isArray(sigData)) {
+          setSignatureDishes(sigData);
+        }
+      })
+      .catch(() => { });
+
+    // Corporate Tasting Requests
+    adminFetch(`${API_BASE}/tasting-requests`)
+      .then(r => r.json())
+      .then(tastingData => {
+        if (Array.isArray(tastingData)) {
+          setTastingRequests(tastingData);
+        }
+      })
+      .catch(() => { });
 
     // Meal Plan Packages
     adminFetch(`${API_BASE}/mealplans/packages`)
@@ -830,7 +1124,7 @@ function App() {
           if (pkgData.length > 0) setMealPlans(pkgData);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Saved Meals & Reminders
     adminFetch(`${API_BASE}/saved-meals`)
@@ -841,7 +1135,7 @@ function App() {
           setSavedCustomers(savedData);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Customer Discounts
     adminFetch(`${API_BASE}/discounts`)
@@ -857,7 +1151,7 @@ function App() {
           );
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Real-time Customers Directory
     adminFetch(`${API_BASE}/customers`)
@@ -868,7 +1162,7 @@ function App() {
           setCustomers(custData);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Real-time Customer Messages
     adminFetch(`${API_BASE}/messages`)
@@ -879,7 +1173,7 @@ function App() {
           setMessages(msgData);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Real-time Store Settings
     adminFetch(`${API_BASE}/settings`)
@@ -903,7 +1197,7 @@ function App() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Real-time Newsletter Subscribers
     adminFetch(`${API_BASE}/subscribers`)
@@ -913,7 +1207,7 @@ function App() {
           setSubscribers(d.subscribers);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Real-time Newsletter Campaigns
     adminFetch(`${API_BASE}/newsletter/campaigns`)
@@ -923,7 +1217,7 @@ function App() {
           setCampaigns(d);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Live SMTP Engine Status
     adminFetch(`${API_BASE}/smtp/status`)
@@ -931,7 +1225,7 @@ function App() {
       .then(d => {
         if (d) setSmtpStatus(d);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Academy Applications
     adminFetch(`${API_BASE}/academy/applications`)
@@ -941,7 +1235,17 @@ function App() {
           setAcademyLeads(d);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
+
+    // Catering Service Prices
+    adminFetch(`${API_BASE}/catering-service-prices`)
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d) && d.length > 0) {
+          setCateringServicePrices(d);
+        }
+      })
+      .catch(() => { });
   };
 
   // Newsletter Studio Handlers
@@ -1139,7 +1443,7 @@ function App() {
 
     try {
       localStorage.setItem('magreat_store_settings', JSON.stringify(payload));
-    } catch {}
+    } catch { }
 
     try {
       const res = await adminFetch(`${API_BASE}/settings`, {
@@ -1158,6 +1462,29 @@ function App() {
       notify('Settings saved locally on browser.');
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  // Real-time Catering Service Pricing Save Handler
+  const saveCateringPrices = async () => {
+    setIsSavingCateringPrices(true);
+    try {
+      const res = await adminFetch(`${API_BASE}/catering-service-prices`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cateringServicePrices)
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        notify('✅ Catering package pricing saved live! Estimator updated across the site.');
+      } else {
+        const msg = data?.error || data?.message || `HTTP ${res.status}`;
+        notify(`⚠️ Could not save prices: ${msg}`);
+      }
+    } catch {
+      notify('⚠️ Network error saving catering service prices.');
+    } finally {
+      setIsSavingCateringPrices(false);
     }
   };
 
@@ -1194,6 +1521,23 @@ function App() {
     [foods, search, filter]
   );
 
+  // Filtered corporate tasting requests
+  const filteredTastingRequests = useMemo(() => {
+    return tastingRequests.filter(t => {
+      const matchSearch = (
+        t.companyName + ' ' +
+        t.contactPerson + ' ' +
+        t.contactPhone + ' ' +
+        t.companyEmail + ' ' +
+        t.location + ' ' +
+        t.mealSelections + ' ' +
+        t.id
+      ).toLowerCase().includes(tastingSearch.toLowerCase());
+      const matchStatus = tastingStatusFilter === 'All' || t.status === tastingStatusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [tastingRequests, tastingSearch, tastingStatusFilter]);
+
   // Dynamic metrics for Overview & Analytics
   const grossRevenue = useMemo(() => orders.reduce((sum, o) => sum + (o.total || 0), 0), [orders]);
   const deliveredCount = useMemo(() => orders.filter(o => o.status === 'Delivered').length, [orders]);
@@ -1214,10 +1558,25 @@ function App() {
     ];
   }, [foods]);
 
-  // Top performing signature dishes by order count
+  // Top performing signature dishes calculated in real time from orders
   const topDishes = useMemo(() => {
-    return [...foods].sort((a, b) => (b.orders || 0) - (a.orders || 0)).slice(0, 6);
-  }, [foods]);
+    const dishCountMap: Record<string, number> = {};
+    orders.forEach(o => {
+      if (Array.isArray(o.items)) {
+        o.items.forEach((item: any) => {
+          const name = (item.name || '').trim().toLowerCase();
+          if (name) {
+            dishCountMap[name] = (dishCountMap[name] || 0) + (Number(item.quantity) || 1);
+          }
+        });
+      }
+    });
+
+    return [...foods].map(f => {
+      const liveOrders = dishCountMap[f.name.trim().toLowerCase()] ?? f.orders ?? 0;
+      return { ...f, orders: liveOrders };
+    }).sort((a, b) => (b.orders || 0) - (a.orders || 0)).slice(0, 6);
+  }, [foods, orders]);
 
   // Global search quick hits for topbar
   const searchResults = useMemo(() => {
@@ -1241,6 +1600,7 @@ function App() {
     setFoodDescription('');
     setFoodImage('');
     setFoodStatus('Available');
+    setFoodAvailableLocations([]);
     setShowAddFood(true);
   };
 
@@ -1253,6 +1613,7 @@ function App() {
     setFoodDescription(f.description || '');
     setFoodImage(f.image);
     setFoodStatus(f.status);
+    setFoodAvailableLocations(Array.isArray(f.availableLocations) ? f.availableLocations : []);
     setShowAddFood(true);
   };
 
@@ -1269,7 +1630,8 @@ function App() {
       tag: foodTag.trim() || undefined,
       description: foodDescription.trim() || `Authentic signature ${foodCategory} dish.`,
       image: foodImage.trim() || FALLBACK_FOOD_IMG,
-      status: foodStatus
+      status: foodStatus,
+      availableLocations: foodAvailableLocations
     };
 
     if (editingFood) {
@@ -1311,16 +1673,188 @@ function App() {
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          const created = await res.json();
-          if (created && created.id) {
-            setFoods(prev => prev.map(f => (f.id === tempId ? { ...f, id: created.id } : f)));
-          }
-          notify(`"${foodName}" saved live in database!`);
+          const saved = await res.json();
+          setFoods(prev => prev.map(f => (f.id === tempId ? { ...f, id: saved.id } : f)));
+          notify(`"${foodName}" published live!`);
         }
       } catch (err) {
         console.warn('Backend sync:', err);
       }
+    }
+  };
+
+  // Delivery Locations Handlers (Lagos State Only)
+  const openAddLocationModal = () => {
+    setEditingLocation(null);
+    setLocName('');
+    setLocZone('Lagos Island');
+    setLocDeliveryFee('2500');
+    setLocEstimatedTime('25–40 min');
+    setLocIsActive(true);
+    setShowLocationModal(true);
+  };
+
+  const openEditLocationModal = (loc: DeliveryLocation) => {
+    setEditingLocation(loc);
+    setLocName(loc.name);
+    setLocZone(loc.zone);
+    setLocDeliveryFee(String(loc.deliveryFee));
+    setLocEstimatedTime(loc.estimatedTime);
+    setLocIsActive(loc.isActive);
+    setShowLocationModal(true);
+  };
+
+  const saveDeliveryLocation = async () => {
+    if (!locName.trim() || Number(locDeliveryFee) < 0) {
+      notify('Please enter a valid location name and delivery fee.');
       return;
+    }
+
+    setIsSavingLocation(true);
+    const payload = {
+      name: locName.trim(),
+      zone: locZone.trim() || 'Lagos',
+      state: 'Lagos' as const,
+      deliveryFee: Number(locDeliveryFee) || 0,
+      estimatedTime: locEstimatedTime.trim() || '25–40 min',
+      isActive: locIsActive
+    };
+
+    if (editingLocation) {
+      const locId = editingLocation.id;
+      setDeliveryLocations(prev => prev.map(l => l.id === locId ? { ...l, ...payload } : l));
+      setShowLocationModal(false);
+      setEditingLocation(null);
+      notify(`"${payload.name}" updated successfully!`);
+
+      try {
+        const res = await adminFetch(`${API_BASE}/locations/${locId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          notify(`"${payload.name}" saved live in database!`);
+        }
+      } catch (err) {
+        console.warn('Backend sync location update:', err);
+      } finally {
+        setIsSavingLocation(false);
+      }
+    } else {
+      const slug = locName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const tempId = deliveryLocations.some(l => l.id === slug) ? `${slug}-${Date.now().toString().slice(-4)}` : slug;
+      const newLoc: DeliveryLocation = {
+        ...payload,
+        id: tempId
+      };
+      setDeliveryLocations(prev => [...prev, newLoc]);
+      setShowLocationModal(false);
+      notify(`Lagos location "${payload.name}" created!`);
+
+      try {
+        const res = await adminFetch(`${API_BASE}/locations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const saved = await res.json();
+          setDeliveryLocations(prev => prev.map(l => l.id === tempId ? saved : l));
+          notify(`"${payload.name}" live and active for orders!`);
+        }
+      } catch (err) {
+        console.warn('Backend sync location create:', err);
+      } finally {
+        setIsSavingLocation(false);
+      }
+    }
+  };
+
+  const toggleLocationActive = async (loc: DeliveryLocation) => {
+    const updatedStatus = !loc.isActive;
+    setDeliveryLocations(prev => prev.map(l => l.id === loc.id ? { ...l, isActive: updatedStatus } : l));
+    notify(`${loc.name} is now ${updatedStatus ? 'ACTIVE (accepting orders)' : 'PAUSED (orders offline)'}`);
+
+    try {
+      await adminFetch(`${API_BASE}/locations/${loc.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: updatedStatus })
+      });
+    } catch (err) {
+      console.warn('Location toggle status error:', err);
+    }
+  };
+
+  const deleteDeliveryLocation = async (locId: string, locName: string) => {
+    if (!window.confirm(`Are you sure you want to delete delivery location "${locName}"?`)) return;
+    setDeliveryLocations(prev => prev.filter(l => l.id !== locId));
+    notify(`Location "${locName}" removed.`);
+
+    try {
+      await adminFetch(`${API_BASE}/locations/${locId}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Location delete error:', err);
+    }
+  };
+
+  const saveLocationMealAssignments = async (locationId: string, assignedDishIds: number[]) => {
+    setIsSavingMealLocations(true);
+    setFoods(prev => prev.map(f => {
+      const isAssigned = assignedDishIds.includes(f.id);
+      let curLocs = Array.isArray(f.availableLocations) ? [...f.availableLocations] : [];
+      if (curLocs.length === 0) {
+        if (!isAssigned) {
+          curLocs = deliveryLocations.filter(l => l.id !== locationId).map(l => l.id);
+        }
+      } else {
+        if (isAssigned && !curLocs.includes(locationId)) {
+          curLocs.push(locationId);
+        } else if (!isAssigned && curLocs.includes(locationId)) {
+          curLocs = curLocs.filter(id => id !== locationId);
+        }
+      }
+      return { ...f, availableLocations: curLocs };
+    }));
+
+    notify(`Meal availability updated for this location!`);
+
+    try {
+      for (const food of foods) {
+        const isAssigned = assignedDishIds.includes(food.id);
+        let curLocs = Array.isArray(food.availableLocations) ? [...food.availableLocations] : [];
+        let changed = false;
+        if (curLocs.length === 0) {
+          if (!isAssigned) {
+            curLocs = deliveryLocations.filter(l => l.id !== locationId).map(l => l.id);
+            changed = true;
+          }
+        } else {
+          if (isAssigned && !curLocs.includes(locationId)) {
+            curLocs.push(locationId);
+            changed = true;
+          } else if (!isAssigned && curLocs.includes(locationId)) {
+            curLocs = curLocs.filter(id => id !== locationId);
+            changed = true;
+          }
+        }
+        if (changed) {
+          await adminFetch(`${API_BASE}/menu/${food.id}/locations`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ locations: curLocs })
+          }).catch(() => { });
+        }
+      }
+      notify(`✅ All meal location assignments synchronized live to backend!`);
+    } catch {
+      notify(`⚠️ Assignments saved locally.`);
+    } finally {
+      setIsSavingMealLocations(false);
+      setMealAssignLocation(null);
     }
   };
 
@@ -1554,7 +2088,7 @@ function App() {
     try {
       await adminFetch(`${API_BASE}/discounts/${cust.discount.id}`, { method: 'DELETE' });
       notify(`Discount removed for ${cust.name}.`);
-    } catch {}
+    } catch { }
     setCustomers(prev =>
       prev.map(c => (c.id === cust.id ? { ...c, discount: undefined } : c))
     );
@@ -1749,7 +2283,7 @@ function App() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ unread: false })
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -1763,7 +2297,7 @@ function App() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ unread: nextUnread })
-    }).catch(() => {});
+    }).catch(() => { });
     notify(nextUnread ? 'Marked as unread.' : 'Marked as read.');
   };
 
@@ -1880,7 +2414,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
       });
-    } catch {}
+    } catch { }
     setSavedCustomers(prev =>
       prev.map(c => (c.id === cust.id ? { ...c, reminderStatus: nextStatus } : c))
     );
@@ -1908,7 +2442,7 @@ function App() {
         body: JSON.stringify({ status })
       });
       notify(`Catering lead updated to "${status}".`);
-    } catch {}
+    } catch { }
     setCateringLeads(prev => prev.map(c => (c.id === id ? { ...c, status } : c)));
   };
 
@@ -1920,7 +2454,7 @@ function App() {
         body: JSON.stringify({ status })
       });
       notify(`Application status updated to "${status}".`);
-    } catch {}
+    } catch { }
     setAcademyLeads(prev => prev.map(a => (a.id === id || a.refNumber === id ? { ...a, status } : a)));
   };
 
@@ -1955,6 +2489,151 @@ function App() {
       `Hello ${lead.customerName}! Greetings from Chef Margaret at Ma’Great Taste Catering. Regarding your upcoming ${lead.eventType} for ${lead.guestCount} guests in ${lead.location}: we would love to discuss your custom menu and arrange a food tasting session. When is a good time for a quick call?`
     );
     window.open(`https://wa.me/${intl}?text=${text}`, '_blank');
+  };
+
+  // ==========================================
+  // SIGNATURE DISHES ACTIONS
+  // ==========================================
+  const openAddSignatureModal = () => {
+    setEditingSignatureDish(null);
+    setSigDishName('');
+    setSigDishTag("Chef's Pride");
+    setSigDishPrice('');
+    setSigDishDescription('');
+    setSigDishImage('');
+    setSigSelectedFoodId('');
+    setShowSignatureModal(true);
+  };
+
+  const openEditSignatureModal = (dish: SignatureDish) => {
+    setEditingSignatureDish(dish);
+    setSigDishName(dish.name);
+    setSigDishTag(dish.tag);
+    setSigDishPrice(dish.price ? String(dish.price) : '');
+    setSigDishDescription(dish.description || '');
+    setSigDishImage(dish.image);
+    setSigSelectedFoodId(dish.foodId || '');
+    setShowSignatureModal(true);
+  };
+
+  const saveSignatureDish = async () => {
+    if (!sigDishName.trim() || !sigDishImage.trim()) {
+      notify('Dish name and image URL are required.');
+      return;
+    }
+
+    const payload = {
+      name: sigDishName.trim(),
+      tag: sigDishTag.trim() || "Chef's Pride",
+      price: Number(sigDishPrice) || undefined,
+      description: sigDishDescription.trim() || undefined,
+      image: sigDishImage.trim(),
+      foodId: sigSelectedFoodId ? Number(sigSelectedFoodId) : undefined
+    };
+
+    try {
+      if (editingSignatureDish) {
+        const res = await adminFetch(`${API_BASE}/signature-dishes/${editingSignatureDish.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setSignatureDishes(prev => prev.map(d => d.id === editingSignatureDish.id ? updated : d));
+          notify(`Signature dish "${updated.name}" updated!`);
+        }
+      } else {
+        const res = await adminFetch(`${API_BASE}/signature-dishes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setSignatureDishes(prev => [...prev, created]);
+          notify(`Signature dish "${created.name}" added to spotlights!`);
+        }
+      }
+      setShowSignatureModal(false);
+    } catch {
+      notify('Failed to save signature dish to server.');
+    }
+  };
+
+  const deleteSignatureDishDirect = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to remove "${name}" from signature dishes?`)) return;
+    try {
+      await adminFetch(`${API_BASE}/signature-dishes/${id}`, { method: 'DELETE' });
+      setSignatureDishes(prev => prev.filter(d => d.id !== id));
+      notify(`Removed "${name}" from signature dishes.`);
+    } catch {
+      notify('Failed to remove signature dish.');
+    }
+  };
+
+  const toggleDishAsSignature = async (food: Food) => {
+    const existing = signatureDishes.find(d => d.foodId === food.id || d.name.toLowerCase() === food.name.toLowerCase());
+    if (existing) {
+      await deleteSignatureDishDirect(existing.id, existing.name);
+    } else {
+      try {
+        const res = await adminFetch(`${API_BASE}/signature-dishes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            foodId: food.id,
+            name: food.name,
+            tag: food.tag || "Chef's Pride",
+            price: food.price,
+            description: food.description,
+            image: food.image
+          })
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setSignatureDishes(prev => [...prev, created]);
+          notify(`Added "${food.name}" to Signature Dishes!`);
+        }
+      } catch {
+        notify('Failed to mark dish as signature.');
+      }
+    }
+  };
+
+  // ==========================================
+  // TASTING REQUESTS ACTIONS
+  // ==========================================
+  const updateTastingStatusDirect = async (id: string, status: TastingRequest['status'], adminNotes?: string) => {
+    try {
+      await adminFetch(`${API_BASE}/tasting-requests/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, adminNotes })
+      });
+      notify(`Tasting request updated to "${status}".`);
+    } catch { }
+    setTastingRequests(prev => prev.map(t => t.id === id ? { ...t, status, adminNotes: adminNotes !== undefined ? adminNotes : t.adminNotes } : t));
+  };
+
+  const deleteTastingRequestDirect = async (id: string, company: string) => {
+    if (!confirm(`Are you sure you want to delete the tasting request from "${company}"?`)) return;
+    try {
+      await adminFetch(`${API_BASE}/tasting-requests/${id}`, { method: 'DELETE' });
+      setTastingRequests(prev => prev.filter(t => t.id !== id));
+      notify(`Tasting request for "${company}" removed.`);
+    } catch {
+      notify('Failed to delete tasting request.');
+    }
+  };
+
+  const sendWhatsAppTasting = (t: TastingRequest) => {
+    const cleanPhone = (t.contactPhone || '').replace(/[^0-9]/g, '');
+    const phone = cleanPhone.startsWith('234') ? cleanPhone : '234' + cleanPhone.replace(/^0/, '');
+    const text = encodeURIComponent(
+      `Hello ${t.contactPerson}, this is Chef Margaret from Ma'Great Taste! We have received your Corporate Tasting Box request for ${t.companyName} (${t.guestCount} tasters, ${t.mealCount} meals: ${t.mealSelections}). We'd love to confirm your preferred delivery schedule!`
+    );
+    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
   };
 
   // Export report
@@ -2146,6 +2825,9 @@ function App() {
                       )}
                       {item.label === 'Catering & events' && cateringLeads.length > 0 && (
                         <b>{cateringLeads.length}</b>
+                      )}
+                      {item.label === 'Tasting requests' && tastingRequests.filter(t => t.status === 'Pending').length > 0 && (
+                        <b className="count-hot">{tastingRequests.filter(t => t.status === 'Pending').length}</b>
                       )}
                       {item.label === 'Culinary school' && academyLeads.filter(a => a.status === 'Pending Review').length > 0 && (
                         <b>{academyLeads.filter(a => a.status === 'Pending Review').length}</b>
@@ -2378,7 +3060,9 @@ function App() {
                 {section === 'Overview' && (currentAdmin.role === 'super_admin' ? 'Good morning, Chef Margaret 👋' : `Good morning, ${currentAdmin.name} 👨‍🍳`)}
                 {section === 'Orders' && 'Orders Management'}
                 {section === 'Menu management' && 'Menu Management'}
+                {section === 'Delivery locations' && 'Delivery Locations & Lagos Zones'}
                 {section === 'Catering & events' && 'Catering & Events'}
+                {section === 'Tasting requests' && 'Corporate Tasting Box Requests'}
                 {section === 'Meal plans' && 'Meal Plans & Subscriptions'}
                 {section === 'Culinary school' && 'Culinary Arts Academy'}
                 {section === 'Messages' && 'Customer Messages'}
@@ -2391,8 +3075,10 @@ function App() {
               <p>
                 {section === 'Overview' && (currentAdmin.role === 'super_admin' ? 'Here is what’s cooking at Ma’Great Taste today.' : 'Welcome to your daily kitchen operations and food fulfillment dashboard.')}
                 {section === 'Orders' && 'Track and fulfil incoming orders from the website and delivery dispatch.'}
-                {section === 'Menu management' && 'Add dishes, update pricing, upload dish photos, and manage availability.'}
+                {section === 'Menu management' && 'Add dishes, update pricing, upload dish photos, and manage signature dishes.'}
+                {section === 'Delivery locations' && 'Manage dispatch places strictly within Lagos State, set custom delivery fees, ETAs, and assign which meals are available in each location.'}
                 {section === 'Catering & events' && 'Manage high-value catering leads, corporate bookings, send quotes, and discuss menus.'}
+                {section === 'Tasting requests' && 'Review and organize complimentary corporate tasting box requests for corporate client teams.'}
                 {section === 'Meal plans' && 'Create and edit meal prep packages and freezer stocking subscriptions.'}
                 {section === 'Culinary school' && 'Review student admissions, journey selections, and connect directly with applicants.'}
                 {section === 'Messages' && 'Enquiries, reviews, and questions sent from the website contact forms.'}
@@ -2909,6 +3595,27 @@ function App() {
                         {f.description || 'Signature specialty prepared fresh by Chef Margaret.'}
                       </p>
 
+                      {/* Delivery Availability Badge */}
+                      <div style={{ margin: '6px 0', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          padding: '2px 7px',
+                          borderRadius: 4,
+                          background: (!f.availableLocations || f.availableLocations.length === 0) ? '#f0fdf4' : '#eff6ff',
+                          color: (!f.availableLocations || f.availableLocations.length === 0) ? '#166534' : '#1e40af',
+                          border: (!f.availableLocations || f.availableLocations.length === 0) ? '1px solid #bbf7d0' : '1px solid #bfdbfe'
+                        }}>
+                          <MapPin size={10} />
+                          {(!f.availableLocations || f.availableLocations.length === 0)
+                            ? 'All Lagos'
+                            : `${f.availableLocations.length} Lagos ${f.availableLocations.length === 1 ? 'location' : 'locations'}`}
+                        </span>
+                      </div>
+
                       <div className="food-card-foot">
                         <strong>{money(f.price)}</strong>
                         <span>{f.orders || 0} orders</span>
@@ -2937,6 +3644,206 @@ function App() {
               )}
             </section>
           )}
+
+          {/* ========================================================= */}
+          {/* 2B. DELIVERY LOCATIONS & MEAL ASSIGNMENT (LAGOS ONLY) */}
+          {/* ========================================================= */}
+          {section === 'Delivery locations' && (() => {
+            const activeCount = deliveryLocations.filter(l => l.isActive).length;
+            const islandCount = deliveryLocations.filter(l => l.zone.toLowerCase().includes('island') || l.zone.toLowerCase().includes('lekki') || l.zone.toLowerCase().includes('ikoyi')).length;
+            const mainlandCount = deliveryLocations.filter(l => l.zone.toLowerCase().includes('mainland')).length;
+
+            const filteredLocs = deliveryLocations.filter(l => {
+              const q = locationSearch.toLowerCase().trim();
+              const matchesSearch = !q || l.name.toLowerCase().includes(q) || l.zone.toLowerCase().includes(q) || l.id.toLowerCase().includes(q);
+              const matchesZone = locationZoneFilter === 'All' || l.zone.toLowerCase().includes(locationZoneFilter.toLowerCase());
+              return matchesSearch && matchesZone;
+            });
+
+            return (
+              <section className="panel content-panel">
+                {/* Stats Bar */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
+                  <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Serviceable Lagos Areas</span>
+                    <strong style={{ display: 'block', fontSize: 22, color: 'var(--brand-navy)', marginTop: 4 }}>{deliveryLocations.length} Locations</strong>
+                    <small style={{ color: '#16a34a', fontWeight: 600 }}>{activeCount} active for dispatch</small>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Lagos Island Zones</span>
+                    <strong style={{ display: 'block', fontSize: 22, color: 'var(--brand-navy)', marginTop: 4 }}>{islandCount} Areas</strong>
+                    <small style={{ color: '#475569' }}>Lekki, VI, Ikoyi, Ajah</small>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Lagos Mainland Zones</span>
+                    <strong style={{ display: 'block', fontSize: 22, color: 'var(--brand-navy)', marginTop: 4 }}>{mainlandCount} Areas</strong>
+                    <small style={{ color: '#475569' }}>Ikeja, Surulere, Yaba, Gbagada</small>
+                  </div>
+                  <div style={{ background: '#fef2f2', padding: '14px 16px', borderRadius: 10, border: '1px solid #fee2e2' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-red)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Active Menu Dishes</span>
+                    <strong style={{ display: 'block', fontSize: 22, color: 'var(--brand-red)', marginTop: 4 }}>{foods.length} Dishes</strong>
+                    <small style={{ color: '#991b1b' }}>Assign dishes per location below</small>
+                  </div>
+                </div>
+
+                {/* Toolbar */}
+                <div className="toolbar" style={{ flexWrap: 'wrap', gap: 10 }}>
+                  <div className="search-field" style={{ minWidth: 260 }}>
+                    <Search size={16} />
+                    <input
+                      placeholder="Search Lagos location (e.g. Lekki, Ikeja, VI)..."
+                      value={locationSearch}
+                      onChange={e => setLocationSearch(e.target.value)}
+                    />
+                  </div>
+                  <select value={locationZoneFilter} onChange={e => setLocationZoneFilter(e.target.value)}>
+                    <option value="All">All Lagos Zones</option>
+                    <option value="Island">Island & Lekki</option>
+                    <option value="Mainland">Mainland</option>
+                  </select>
+                  <button className="primary-btn" onClick={openAddLocationModal}>
+                    <Plus size={15} /> Add Lagos Location
+                  </button>
+                </div>
+
+                {/* Locations Grid / Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginTop: 16 }}>
+                  {filteredLocs.map(loc => {
+                    const availableMealsCount = foods.filter(f => !f.availableLocations || f.availableLocations.length === 0 || f.availableLocations.includes(loc.id)).length;
+                    const isAllAvailable = availableMealsCount === foods.length;
+
+                    return (
+                      <div
+                        key={loc.id}
+                        style={{
+                          background: '#ffffff',
+                          border: loc.isActive ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
+                          opacity: loc.isActive ? 1 : 0.75,
+                          borderRadius: 12,
+                          padding: 18,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div>
+                          {/* Top Tag & Active Toggle */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                            <div>
+                              <span style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                padding: '3px 7px',
+                                borderRadius: 4,
+                                background: '#f1f5f9',
+                                color: '#475569',
+                                letterSpacing: 0.5
+                              }}>
+                                📍 Lagos State • {loc.zone}
+                              </span>
+                              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--brand-navy)', margin: '8px 0 2px' }}>
+                                {loc.name}
+                              </h3>
+                              <span style={{ fontSize: 11, color: '#94a3b8' }}>ID: {loc.id}</span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => toggleLocationActive(loc)}
+                              title={loc.isActive ? 'Click to pause delivery here' : 'Click to enable delivery here'}
+                              style={{
+                                border: 'none',
+                                background: loc.isActive ? '#dcfce7' : '#fee2e2',
+                                color: loc.isActive ? '#15803d' : '#b91c1c',
+                                padding: '4px 10px',
+                                borderRadius: 20,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4
+                              }}
+                            >
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: loc.isActive ? '#22c55e' : '#ef4444' }} />
+                              {loc.isActive ? 'Active' : 'Paused'}
+                            </button>
+                          </div>
+
+                          {/* Fee and Delivery Time */}
+                          <div style={{ display: 'flex', gap: 12, margin: '14px 0', padding: '10px 12px', background: '#f8fafc', borderRadius: 8 }}>
+                            <div style={{ flex: 1 }}>
+                              <small style={{ color: '#64748b', fontSize: 11, display: 'block' }}>Delivery Fee</small>
+                              <strong style={{ fontSize: 14, color: 'var(--brand-red)' }}>₦{(loc.deliveryFee || 0).toLocaleString()}</strong>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <small style={{ color: '#64748b', fontSize: 11, display: 'block' }}>Est. Delivery Time</small>
+                              <strong style={{ fontSize: 13, color: 'var(--brand-navy)' }}>{loc.estimatedTime || '25–40 min'}</strong>
+                            </div>
+                          </div>
+
+                          {/* Meal Availability Info */}
+                          <div style={{ padding: '8px 10px', borderRadius: 6, background: isAllAvailable ? '#f0fdf4' : '#eff6ff', border: isAllAvailable ? '1px solid #bbf7d0' : '1px solid #bfdbfe', marginBottom: 14 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: isAllAvailable ? '#166534' : '#1e40af', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <UtensilsCrossed size={12} />
+                                {isAllAvailable ? 'All Dishes Available' : `${availableMealsCount} of ${foods.length} Dishes Available`}
+                              </span>
+                              <span style={{ fontSize: 10, color: isAllAvailable ? '#15803d' : '#2563eb', fontWeight: 600 }}>
+                                {Math.round((availableMealsCount / (foods.length || 1)) * 100)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+                          <button
+                            type="button"
+                            className="secondary-btn"
+                            onClick={() => setMealAssignLocation(loc)}
+                            style={{ flex: 2, padding: '7px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                          >
+                            <UtensilsCrossed size={13} color="var(--brand-red)" />
+                            Assign Specific Meals
+                          </button>
+                          <button
+                            type="button"
+                            className="edit-btn"
+                            onClick={() => openEditLocationModal(loc)}
+                            style={{ flex: 1, padding: '7px 10px', fontSize: 12 }}
+                          >
+                            <Pencil size={13} /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="delete-btn"
+                            onClick={() => deleteDeliveryLocation(loc.id, loc.name)}
+                            style={{ padding: '7px 10px', fontSize: 12 }}
+                            title="Delete location"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {filteredLocs.length === 0 && (
+                  <div className="empty-state" style={{ marginTop: 24 }}>
+                    <p>No Lagos locations match your search or zone filter.</p>
+                    <button className="secondary-btn" onClick={() => { setLocationSearch(''); setLocationZoneFilter('All'); }}>
+                      Reset filters
+                    </button>
+                  </div>
+                )}
+              </section>
+            );
+          })()}
 
           {/* ========================================================= */}
           {/* 3. ORDERS MANAGEMENT */}
@@ -3377,6 +4284,14 @@ function App() {
                         )}
 
                         <div className="event-actions-bar">
+                          {c.status !== 'Confirmed' && c.status !== 'Declined' && (
+                            <button
+                              className="catering-confirm-action-btn"
+                              onClick={() => updateCateringStatusDirect(c.id, 'Confirmed')}
+                            >
+                              <CheckCircle2 size={14} /> Confirm
+                            </button>
+                          )}
                           <button className="primary-btn" onClick={() => openQuoteModal(c)}>
                             <DollarSign size={14} /> Send Quotation
                           </button>
@@ -3391,6 +4306,174 @@ function App() {
                     ))}
                   </div>
                 )}
+              </section>
+            );
+          })()}
+
+          {/* ========================================================= */}
+          {/* CORPORATE TASTING BOX REQUESTS SECTION */}
+          {/* ========================================================= */}
+          {section === 'Tasting requests' && (() => {
+            const pendingCount = tastingRequests.filter(t => t.status === 'Pending').length;
+            const scheduledCount = tastingRequests.filter(t => t.status === 'Scheduled').length;
+            const deliveredCount = tastingRequests.filter(t => t.status === 'Delivered').length;
+
+            return (
+              <section className="panel content-panel">
+                {/* KPI Metrics */}
+                <div className="tasting-kpi-grid">
+                  <div className="stat-card">
+                    <small>TOTAL TASTING LEADS</small>
+                    <div className="stat-val">{tastingRequests.length}</div>
+                    <span>Corporate Organizations</span>
+                  </div>
+                  <div className="stat-card">
+                    <small>PENDING REVIEW</small>
+                    <div className="stat-val" style={{ color: '#d97706' }}>{pendingCount}</div>
+                    <span>Awaiting Dispatch Setup</span>
+                  </div>
+                  <div className="stat-card">
+                    <small>CONFIRMED / SCHEDULED</small>
+                    <div className="stat-val" style={{ color: '#2563eb' }}>{scheduledCount}</div>
+                    <span>Tasting Sessions Booked</span>
+                  </div>
+                  <div className="stat-card">
+                    <small>DELIVERED / SAMPLED</small>
+                    <div className="stat-val" style={{ color: '#16a34a' }}>{deliveredCount}</div>
+                    <span>Converted &amp; Follow-up</span>
+                  </div>
+                </div>
+
+                {/* Toolbar */}
+                <div className="toolbar">
+                  <div className="search-field">
+                    <Search size={16} />
+                    <input
+                      placeholder="Search company, contact person, meals, location..."
+                      value={tastingSearch}
+                      onChange={e => setTastingSearch(e.target.value)}
+                    />
+                  </div>
+
+                  <select
+                    value={tastingStatusFilter}
+                    onChange={e => setTastingStatusFilter(e.target.value as any)}
+                  >
+                    <option value="All">All Statuses ({tastingRequests.length})</option>
+                    <option value="Pending">Pending ({pendingCount})</option>
+                    <option value="Scheduled">Scheduled ({scheduledCount})</option>
+                    <option value="Delivered">Delivered ({deliveredCount})</option>
+                    <option value="Declined">Declined</option>
+                  </select>
+
+                  <button className="secondary-btn" onClick={loadBackendData} title="Fetch latest tasting requests">
+                    Refresh
+                  </button>
+                </div>
+
+                {/* Table */}
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Ref &amp; Date</th>
+                        <th>Company &amp; Contact</th>
+                        <th>Tasters &amp; Meals</th>
+                        <th>Requested Dishes</th>
+                        <th>Location &amp; Schedule</th>
+                        <th>Status</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTastingRequests.map(t => (
+                        <tr key={t.id}>
+                          <td>
+                            <strong style={{ color: '#c6381e', fontSize: 12 }}>#{t.id}</strong>
+                            <div style={{ fontSize: 11, color: '#8b96a2', marginTop: 2 }}>
+                              {new Date(t.createdAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 800, color: 'var(--brand-navy)' }}>{t.companyName}</div>
+                            <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>{t.contactPerson}</div>
+                            <div style={{ fontSize: 11, color: '#64748b' }}>
+                              <a href={`tel:${t.contactPhone}`} style={{ color: '#182838', textDecoration: 'none' }}>{t.contactPhone}</a> &bull; {t.companyEmail}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 700, color: '#182838' }}>{t.guestCount} People</div>
+                            <div style={{ fontSize: 12, color: '#64748b' }}>{t.mealCount} Courses</div>
+                          </td>
+                          <td style={{ maxWidth: 260 }}>
+                            <div className="tasting-card-meals-box">
+                              {t.mealSelections}
+                            </div>
+                            {t.notes && (
+                              <div style={{ fontSize: 11, color: '#d97706', marginTop: 4 }}>
+                                <b>Note:</b> {t.notes}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#182838' }}>{t.location}</div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                              📅 {t.preferredDate} ({t.preferredTime})
+                            </div>
+                          </td>
+                          <td>
+                            <select
+                              className={`tasting-status-badge tasting-status-${t.status.toLowerCase()}`}
+                              value={t.status}
+                              onChange={e => updateTastingStatusDirect(t.id, e.target.value as any)}
+                              style={{ cursor: 'pointer', outline: 'none' }}
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Scheduled">Scheduled</option>
+                              <option value="Delivered">Delivered</option>
+                              <option value="Declined">Declined</option>
+                            </select>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                              <button
+                                className="whatsapp-action-btn"
+                                onClick={() => sendWhatsAppTasting(t)}
+                                title="Chat on WhatsApp"
+                              >
+                                <MessageCircle size={14} /> WhatsApp
+                              </button>
+                              <button
+                                className="secondary-btn"
+                                onClick={() => setSelectedTastingDrawer(t)}
+                                title="View details"
+                              >
+                                <FileText size={13} />
+                              </button>
+                              <button
+                                className="delete-btn"
+                                onClick={() => deleteTastingRequestDirect(t.id, t.companyName)}
+                                title="Delete request"
+                                style={{ padding: '6px 8px' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {filteredTastingRequests.length === 0 && (
+                    <div className="empty-state" style={{ padding: 40, textAlign: 'center' }}>
+                      <p>No corporate tasting requests match your current filters.</p>
+                      <button className="secondary-btn" onClick={() => { setTastingSearch(''); setTastingStatusFilter('All'); }}>
+                        Reset filters
+                      </button>
+                    </div>
+                  )}
+                </div>
               </section>
             );
           })()}
@@ -3485,23 +4568,23 @@ function App() {
                     <h4>
                       {getTimeCategory(reminderDispatchTime)} Alert (
                       {reminderDispatchTime === '07:30' ? '7:30 AM' :
-                       reminderDispatchTime === '08:00' ? '8:00 AM' :
-                       reminderDispatchTime === '08:30' ? '8:30 AM' :
-                       reminderDispatchTime === '09:00' ? '9:00 AM' :
-                       reminderDispatchTime === '11:00' ? '11:00 AM' :
-                       reminderDispatchTime === '11:30' ? '11:30 AM' :
-                       reminderDispatchTime === '12:00' ? '12:00 PM' :
-                       reminderDispatchTime === '12:30' ? '12:30 PM' :
-                       reminderDispatchTime === '13:00' ? '1:00 PM' :
-                       reminderDispatchTime === '14:30' ? '2:30 PM' :
-                       reminderDispatchTime === '15:00' ? '3:00 PM' :
-                       reminderDispatchTime === '15:30' ? '3:30 PM' :
-                       reminderDispatchTime === '16:00' ? '4:00 PM' :
-                       reminderDispatchTime === '16:30' ? '4:30 PM' :
-                       reminderDispatchTime === '17:00' ? '5:00 PM' :
-                       reminderDispatchTime === '17:30' ? '5:30 PM' :
-                       reminderDispatchTime === '18:00' ? '6:00 PM' :
-                       reminderDispatchTime === '19:00' ? '7:00 PM' : reminderDispatchTime})
+                        reminderDispatchTime === '08:00' ? '8:00 AM' :
+                          reminderDispatchTime === '08:30' ? '8:30 AM' :
+                            reminderDispatchTime === '09:00' ? '9:00 AM' :
+                              reminderDispatchTime === '11:00' ? '11:00 AM' :
+                                reminderDispatchTime === '11:30' ? '11:30 AM' :
+                                  reminderDispatchTime === '12:00' ? '12:00 PM' :
+                                    reminderDispatchTime === '12:30' ? '12:30 PM' :
+                                      reminderDispatchTime === '13:00' ? '1:00 PM' :
+                                        reminderDispatchTime === '14:30' ? '2:30 PM' :
+                                          reminderDispatchTime === '15:00' ? '3:00 PM' :
+                                            reminderDispatchTime === '15:30' ? '3:30 PM' :
+                                              reminderDispatchTime === '16:00' ? '4:00 PM' :
+                                                reminderDispatchTime === '16:30' ? '4:30 PM' :
+                                                  reminderDispatchTime === '17:00' ? '5:00 PM' :
+                                                    reminderDispatchTime === '17:30' ? '5:30 PM' :
+                                                      reminderDispatchTime === '18:00' ? '6:00 PM' :
+                                                        reminderDispatchTime === '19:00' ? '7:00 PM' : reminderDispatchTime})
                     </h4>
                     <p>
                       At your scheduled time, the auto engine dispatches tailored alerts for {getTimeCategory(reminderDispatchTime).toLowerCase()} favorites before kitchen cutoff.
@@ -3531,16 +4614,16 @@ function App() {
                   const count = cat === 'All'
                     ? savedCustomers.length
                     : savedCustomers.filter(c => {
-                        if (c.mealType === cat) return true;
-                        return c.items.some(i => {
-                          const text = `${i.name} ${i.category || ''}`.toLowerCase();
-                          if (cat === 'Breakfast') return text.includes('breakfast') || text.includes('waakye') || text.includes('egg') || text.includes('plantain');
-                          if (cat === 'Lunch') return text.includes('jollof') || text.includes('rice') || text.includes('lunch') || text.includes('noodles');
-                          if (cat === 'Dessert & Snacks') return text.includes('puff') || text.includes('pie') || text.includes('cake') || text.includes('pastry') || text.includes('sweet') || text.includes('snack');
-                          if (cat === 'Dinner') return text.includes('soup') || text.includes('swallow') || text.includes('egusi') || text.includes('asun') || text.includes('dinner');
-                          return false;
-                        });
-                      }).length;
+                      if (c.mealType === cat) return true;
+                      return c.items.some(i => {
+                        const text = `${i.name} ${i.category || ''}`.toLowerCase();
+                        if (cat === 'Breakfast') return text.includes('breakfast') || text.includes('waakye') || text.includes('egg') || text.includes('plantain');
+                        if (cat === 'Lunch') return text.includes('jollof') || text.includes('rice') || text.includes('lunch') || text.includes('noodles');
+                        if (cat === 'Dessert & Snacks') return text.includes('puff') || text.includes('pie') || text.includes('cake') || text.includes('pastry') || text.includes('sweet') || text.includes('snack');
+                        if (cat === 'Dinner') return text.includes('soup') || text.includes('swallow') || text.includes('egusi') || text.includes('asun') || text.includes('dinner');
+                        return false;
+                      });
+                    }).length;
 
                   return (
                     <button
@@ -3719,8 +4802,8 @@ function App() {
                           const isSelected = selectedReminderIds.includes(c.id);
                           const inferredType = c.mealType || (
                             c.items.some(i => i.name.toLowerCase().includes('waakye') || i.name.toLowerCase().includes('breakfast')) ? 'Breakfast' :
-                            c.items.some(i => i.name.toLowerCase().includes('jollof') || i.name.toLowerCase().includes('rice')) ? 'Lunch' :
-                            c.items.some(i => i.name.toLowerCase().includes('puff') || i.name.toLowerCase().includes('pie')) ? 'Dessert & Snacks' : 'Dinner'
+                              c.items.some(i => i.name.toLowerCase().includes('jollof') || i.name.toLowerCase().includes('rice')) ? 'Lunch' :
+                                c.items.some(i => i.name.toLowerCase().includes('puff') || i.name.toLowerCase().includes('pie')) ? 'Dessert & Snacks' : 'Dinner'
                           );
 
                           return (
@@ -3751,11 +4834,11 @@ function App() {
                                   padding: '3px 8px',
                                   borderRadius: 12,
                                   background: inferredType === 'Breakfast' ? '#fef3c7' :
-                                              inferredType === 'Lunch' ? '#e0f2fe' :
-                                              inferredType === 'Dessert & Snacks' ? '#fce7f3' : '#f3e8ff',
+                                    inferredType === 'Lunch' ? '#e0f2fe' :
+                                      inferredType === 'Dessert & Snacks' ? '#fce7f3' : '#f3e8ff',
                                   color: inferredType === 'Breakfast' ? '#92400e' :
-                                         inferredType === 'Lunch' ? '#0369a1' :
-                                         inferredType === 'Dessert & Snacks' ? '#be185d' : '#6b21a8'
+                                    inferredType === 'Lunch' ? '#0369a1' :
+                                      inferredType === 'Dessert & Snacks' ? '#be185d' : '#6b21a8'
                                 }}>
                                   {inferredType === 'Breakfast' && '🌅 Breakfast'}
                                   {inferredType === 'Lunch' && '☀️ Lunch'}
@@ -4188,8 +5271,8 @@ function App() {
                             const journeyTitle = isDiploma
                               ? '6 Months Pro Diploma ★'
                               : isExecutive
-                              ? '9 Months Executive Master'
-                              : '3 Months Foundation';
+                                ? '9 Months Executive Master'
+                                : '3 Months Foundation';
                             const tuitionText = isDiploma ? '₦490,000' : isExecutive ? '₦750,000' : '₦280,000';
 
                             const waMsg = encodeURIComponent(
@@ -4313,8 +5396,8 @@ function App() {
                         a.journey === '3-months'
                           ? '3 Months Foundation (₦280k)'
                           : a.journey === '6-months'
-                          ? '6 Months Pro Diploma ★ (₦490k)'
-                          : '9 Months Executive Masterclass (₦750k)';
+                            ? '6 Months Pro Diploma ★ (₦490k)'
+                            : '9 Months Executive Masterclass (₦750k)';
 
                       const waMsg = encodeURIComponent(
                         `Hello ${a.fullName}! This is Chef Margaret & the Admissions Team at Ma'Great Culinary Arts Academy. We received your application (${a.refNumber}) for the ${journeyLabel}. We're excited to guide your admission into our upcoming cohort!`
@@ -4435,7 +5518,7 @@ function App() {
                         if (selectedMessage) {
                           setSelectedMessage({ ...selectedMessage, unread: false });
                         }
-                        adminFetch(`${API_BASE}/messages/read-all`, { method: 'POST' }).catch(() => {});
+                        adminFetch(`${API_BASE}/messages/read-all`, { method: 'POST' }).catch(() => { });
                         notify('All messages marked as read.');
                       }}
                       title="Mark all messages as read"
@@ -4626,8 +5709,8 @@ function App() {
                     {isCheckingSmtp
                       ? 'Verifying Mailtrap SMTP...'
                       : smtpStatus?.success
-                      ? 'Mailtrap Live SMTP Active'
-                      : (smtpStatus?.message || 'SMTP Ready (Mailtrap Live)')}
+                        ? 'Mailtrap Live SMTP Active'
+                        : (smtpStatus?.message || 'SMTP Ready (Mailtrap Live)')}
                   </span>
 
                   <span className="newsletter-meta-chip">
@@ -5325,6 +6408,95 @@ function App() {
                   {isSavingSettings ? 'Saving...' : 'Save Operations'}
                 </button>
               </section>
+
+              <section className="panel settings-panel" style={{ gridColumn: '1 / -1', marginTop: 16 }}>
+                <div className="panel-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <CircleDollarSign size={18} color="var(--brand-red)" />
+                      Catering Packages & Real-Time Estimator Pricing
+                    </h3>
+                    <p>Determine per-guest pricing (₦) for event styles at any given time. Live-updates the website estimator instantly.</p>
+                  </div>
+                  <button
+                    className="primary-btn"
+                    disabled={isSavingCateringPrices}
+                    onClick={saveCateringPrices}
+                    style={{ background: 'var(--brand-red)', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <CheckCircle2 size={16} />
+                    {isSavingCateringPrices ? 'Saving Live...' : 'Save Catering Rates'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 16 }}>
+                  {cateringServicePrices.map((pkg, idx) => (
+                    <div
+                      key={pkg.id || idx}
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: 10,
+                        padding: 16,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#64748b' }}>
+                          Package: {pkg.id}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-red)', background: '#fee2e2', padding: '2px 8px', borderRadius: 4 }}>
+                          ₦{(pkg.pricePerGuest || 0).toLocaleString()} / guest
+                        </span>
+                      </div>
+
+                      <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-navy)' }}>
+                        Package Title
+                        <input
+                          type="text"
+                          value={pkg.label}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setCateringServicePrices(prev => prev.map((p, i) => i === idx ? { ...p, label: val } : p));
+                          }}
+                          placeholder="Package Title"
+                          style={{ marginTop: 4, width: '100%' }}
+                        />
+                      </label>
+
+                      <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-navy)' }}>
+                        Price Per Guest (₦)
+                        <input
+                          type="number"
+                          value={pkg.pricePerGuest}
+                          onChange={e => {
+                            const val = Number(e.target.value) || 0;
+                            setCateringServicePrices(prev => prev.map((p, i) => i === idx ? { ...p, pricePerGuest: val } : p));
+                          }}
+                          placeholder="8500"
+                          style={{ marginTop: 4, width: '100%' }}
+                        />
+                      </label>
+
+                      <label style={{ fontSize: 12, fontWeight: 500, color: '#64748b' }}>
+                        Brief Description
+                        <input
+                          type="text"
+                          value={pkg.description || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setCateringServicePrices(prev => prev.map((p, i) => i === idx ? { ...p, description: val } : p));
+                          }}
+                          placeholder="Package summary..."
+                          style={{ marginTop: 4, width: '100%' }}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
         </div>
@@ -5516,6 +6688,17 @@ function App() {
             </div>
 
             <div className="receipt-footer">
+              {selectedCateringDrawer.status !== 'Confirmed' && (
+                <button
+                  className="catering-confirm-action-btn"
+                  onClick={() => {
+                    updateCateringStatusDirect(selectedCateringDrawer.id, 'Confirmed');
+                    setSelectedCateringDrawer(prev => prev ? { ...prev, status: 'Confirmed' } : null);
+                  }}
+                >
+                  <CheckCircle2 size={15} /> Confirm Booking
+                </button>
+              )}
               <button
                 className="whatsapp-btn"
                 onClick={() => sendWhatsAppCatering(selectedCateringDrawer)}
@@ -5547,8 +6730,8 @@ function App() {
         const journeyTitle = isDiploma
           ? '6 Months Pro Diploma ★'
           : isExecutive
-          ? '9 Months Executive Masterclass'
-          : '3 Months Foundation Skills';
+            ? '9 Months Executive Masterclass'
+            : '3 Months Foundation Skills';
         const tuitionText = isDiploma ? '₦490,000' : isExecutive ? '₦750,000' : '₦280,000';
         const waMsg = encodeURIComponent(
           `Hello ${a.fullName}! This is Chef Margaret & the Admissions Team at Ma'Great Culinary Arts Academy. We are following up regarding your registration (${a.refNumber}) for the ${journeyTitle}. Let us know if you have any questions regarding cohort schedules or tuition breakdown!`
@@ -5964,6 +7147,79 @@ function App() {
                     if (file) handleImageUpload(file);
                   }}
                 />
+              </div>
+
+              {/* Delivery Availability within Lagos */}
+              <div style={{ marginTop: 14, padding: 12, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-navy)', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                    <MapPin size={16} color="var(--brand-red)" />
+                    Delivery Availability (Lagos Locations)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (foodAvailableLocations.length === deliveryLocations.length) {
+                        setFoodAvailableLocations([]);
+                      } else {
+                        setFoodAvailableLocations(deliveryLocations.map(l => l.id));
+                      }
+                    }}
+                    style={{ fontSize: 11, background: 'none', border: 'none', color: 'var(--brand-red)', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {foodAvailableLocations.length === 0 || foodAvailableLocations.length === deliveryLocations.length
+                      ? 'Select Specific Locations'
+                      : 'Reset to All Lagos'}
+                  </button>
+                </div>
+                <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 10px' }}>
+                  {foodAvailableLocations.length === 0
+                    ? '✨ Currently available to customers everywhere in Lagos State.'
+                    : `🎯 Restricted to ${foodAvailableLocations.length} selected Lagos location(s).`}
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8, maxHeight: 150, overflowY: 'auto', padding: 2 }}>
+                  {deliveryLocations.map(loc => {
+                    const isSelected = foodAvailableLocations.length === 0 || foodAvailableLocations.includes(loc.id);
+                    return (
+                      <label
+                        key={loc.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 7,
+                          padding: '6px 8px',
+                          borderRadius: 6,
+                          background: isSelected ? '#eff6ff' : '#ffffff',
+                          border: isSelected ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                          fontSize: 11,
+                          fontWeight: isSelected ? 600 : 400,
+                          color: isSelected ? '#1e40af' : '#475569',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={foodAvailableLocations.includes(loc.id)}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setFoodAvailableLocations(prev => [...prev, loc.id]);
+                            } else {
+                              if (foodAvailableLocations.length === 0) {
+                                setFoodAvailableLocations(deliveryLocations.filter(l => l.id !== loc.id).map(l => l.id));
+                              } else {
+                                setFoodAvailableLocations(prev => prev.filter(id => id !== loc.id));
+                              }
+                            }
+                          }}
+                        />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {loc.name}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="modal-actions">
@@ -6491,6 +7747,340 @@ function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / EDIT SIGNATURE DISH */}
+      {showSignatureModal && (
+        <div className="modal-backdrop" onClick={() => setShowSignatureModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
+            <div className="modal-head">
+              <div>
+                <span className="modal-icon">
+                  <Star size={19} color="#d99c2b" />
+                </span>
+                <h2>{editingSignatureDish ? 'Edit Signature Dish' : 'Add Signature Dish'}</h2>
+                <p>Feature this dish in the homepage hero rotation and Chef's personal favorites.</p>
+              </div>
+              <button className="icon-btn" onClick={() => setShowSignatureModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {/* Quick Pick from Menu */}
+              {!editingSignatureDish && (
+                <div className="form-group" style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 16 }}>
+                  <label style={{ color: '#182838', fontWeight: 800 }}>⚡ Quick Select From Existing Menu Dishes</label>
+                  <select
+                    value={sigSelectedFoodId}
+                    onChange={e => {
+                      const selectedId = Number(e.target.value);
+                      setSigSelectedFoodId(selectedId || '');
+                      const match = foods.find(f => f.id === selectedId);
+                      if (match) {
+                        setSigDishName(match.name);
+                        setSigDishPrice(String(match.price));
+                        setSigDishImage(match.image);
+                        setSigDishDescription(match.description || '');
+                        if (match.tag) setSigDishTag(match.tag);
+                      }
+                    }}
+                    style={{ marginTop: 6, width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="">-- Choose a dish to auto-fill details --</option>
+                    {foods.map(f => (
+                      <option key={f.id} value={f.id}>
+                        {f.name} ({money(f.price)}) - {f.category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label>Dish Name *</label>
+                <input
+                  placeholder="e.g. Fresh Catfish Pepper Soup"
+                  value={sigDishName}
+                  onChange={e => setSigDishName(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                />
+              </div>
+
+              <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                <div className="form-group">
+                  <label>Highlight Tag / Badge *</label>
+                  <input
+                    placeholder="e.g. Chef's Pride, Rich &amp; Savory"
+                    value={sigDishTag}
+                    onChange={e => setSigDishTag(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Price (₦)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 8500"
+                    value={sigDishPrice}
+                    onChange={e => setSigDishPrice(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label>Image URL *</label>
+                <input
+                  placeholder="https://images.unsplash.com/... or Cloudinary URL"
+                  value={sigDishImage}
+                  onChange={e => setSigDishImage(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                />
+                {sigDishImage && (
+                  <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', height: 120, width: '100%', background: '#0f172a' }}>
+                    <img
+                      src={sigDishImage}
+                      alt="Preview"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 14 }}>
+                <label>Short Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Brief culinary note describing flavors and ingredients..."
+                  value={sigDishDescription}
+                  onChange={e => setSigDishDescription(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                />
+              </div>
+            </div>
+
+            <div className="modal-foot">
+              <button type="button" className="secondary-btn" onClick={() => setShowSignatureModal(false)}>
+                Cancel
+              </button>
+              <button type="button" className="primary-btn" onClick={saveSignatureDish}>
+                {editingSignatureDish ? 'Update Signature Dish' : 'Publish Signature Dish'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DRAWER: CORPORATE TASTING REQUEST DOSSIER */}
+      {selectedTastingDrawer && (
+        <div className="drawer-backdrop" onClick={() => setSelectedTastingDrawer(null)}>
+          <div className="drawer" onClick={e => e.stopPropagation()}>
+            <div className="drawer-head">
+              <div>
+                <h2>Tasting Request #{selectedTastingDrawer.id}</h2>
+                <p>Submitted {new Date(selectedTastingDrawer.createdAt).toLocaleString()}</p>
+              </div>
+              <button className="icon-btn" onClick={() => setSelectedTastingDrawer(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="drawer-body">
+              <div className="receipt-box">
+                <strong>Corporate Details</strong>
+                <p><b>Company:</b> {selectedTastingDrawer.companyName}</p>
+                <p><b>Contact Person:</b> {selectedTastingDrawer.contactPerson}</p>
+                <p><b>Phone:</b> <a href={`tel:${selectedTastingDrawer.contactPhone}`} style={{ color: '#c6381e' }}>{selectedTastingDrawer.contactPhone}</a></p>
+                <p><b>Official Email:</b> <a href={`mailto:${selectedTastingDrawer.companyEmail}`} style={{ color: '#c6381e' }}>{selectedTastingDrawer.companyEmail}</a></p>
+                <p><b>Office Location:</b> {selectedTastingDrawer.location}</p>
+                <p><b>Schedule:</b> {selectedTastingDrawer.preferredDate} ({selectedTastingDrawer.preferredTime})</p>
+              </div>
+
+              <div className="receipt-box">
+                <strong>Tasting Specifications</strong>
+                <p><b>Number of Tasters:</b> {selectedTastingDrawer.guestCount} People</p>
+                <p><b>Courses Count:</b> {selectedTastingDrawer.mealCount} Different Meals</p>
+                <div style={{ marginTop: 8 }}>
+                  <b>Selected Meals:</b>
+                  <div className="tasting-card-meals-box" style={{ marginTop: 4 }}>
+                    {selectedTastingDrawer.mealSelections}
+                  </div>
+                </div>
+                {selectedTastingDrawer.notes && (
+                  <p style={{ marginTop: 8, color: '#d97706' }}>
+                    <b>Client Dietary Notes:</b> {selectedTastingDrawer.notes}
+                  </p>
+                )}
+              </div>
+
+              <div className="receipt-box">
+                <strong>Update Booking Status</strong>
+                <select
+                  value={selectedTastingDrawer.status}
+                  onChange={e => {
+                    const newStatus = e.target.value as any;
+                    updateTastingStatusDirect(selectedTastingDrawer.id, newStatus);
+                    setSelectedTastingDrawer(prev => prev ? { ...prev, status: newStatus } : null);
+                  }}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', marginTop: 6 }}
+                >
+                  <option value="Pending">Pending Review</option>
+                  <option value="Scheduled">Scheduled &amp; Confirmed</option>
+                  <option value="Delivered">Delivered / Completed</option>
+                  <option value="Declined">Declined</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="receipt-footer">
+              <button
+                className="whatsapp-btn"
+                onClick={() => sendWhatsAppTasting(selectedTastingDrawer)}
+              >
+                <MessageCircle size={15} /> Chat on WhatsApp
+              </button>
+              <a
+                href={`mailto:${selectedTastingDrawer.companyEmail}?subject=Ma'Great Taste Corporate Tasting Box — ${encodeURIComponent(selectedTastingDrawer.companyName)}`}
+                className="primary-btn"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Mail size={15} /> Email Client
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: ADD / EDIT LAGOS DELIVERY LOCATION */}
+      {/* ========================================================= */}
+      {showLocationModal && (
+        <div className="modal-backdrop" onClick={() => setShowLocationModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="modal-icon">
+                  <MapPin size={19} />
+                </span>
+                <h2>{editingLocation ? 'Edit Lagos Location' : 'Add Lagos Delivery Location'}</h2>
+                <p>Manage dispatch pricing and ETAs for places within Lagos State only.</p>
+              </div>
+              <button className="icon-btn" onClick={() => setShowLocationModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                saveDeliveryLocation();
+              }}
+            >
+              <label>
+                Location / Area Name (Within Lagos State)
+                <input
+                  value={locName}
+                  onChange={e => setLocName(e.target.value)}
+                  placeholder="e.g. Lekki Phase 1, Victoria Island, Ikeja GRA, Surulere"
+                  required
+                />
+              </label>
+
+              <div className="form-row">
+                <label>
+                  Zone / Region
+                  <select value={locZone} onChange={e => setLocZone(e.target.value)}>
+                    <option value="Lagos Island">Lagos Island</option>
+                    <option value="Island & Lekki Axis">Island & Lekki Axis</option>
+                    <option value="Lekki-Epe Axis">Lekki-Epe Axis</option>
+                    <option value="Lagos Mainland">Lagos Mainland</option>
+                    <option value="Ikeja & Environs">Ikeja & Environs</option>
+                  </select>
+                </label>
+                <label>
+                  Delivery Fee (₦)
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={locDeliveryFee}
+                    onChange={e => setLocDeliveryFee(e.target.value)}
+                    placeholder="2500"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Estimated Delivery Time
+                  <input
+                    value={locEstimatedTime}
+                    onChange={e => setLocEstimatedTime(e.target.value)}
+                    placeholder="e.g. 25–40 min"
+                    required
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <span style={{ marginBottom: 6 }}>Dispatch Status</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 42 }}>
+                    <input
+                      type="checkbox"
+                      id="locIsActive"
+                      checked={locIsActive}
+                      onChange={e => setLocIsActive(e.target.checked)}
+                      style={{ width: 18, height: 18 }}
+                    />
+                    <label htmlFor="locIsActive" style={{ margin: 0, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                      Active for Customer Orders
+                    </label>
+                  </div>
+                </label>
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: 20 }}>
+                <button type="button" className="secondary-btn" onClick={() => setShowLocationModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="primary-btn" disabled={isSavingLocation}>
+                  {isSavingLocation ? 'Saving...' : (editingLocation ? 'Save Changes' : 'Create Location')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: ASSIGN SPECIFIC MEALS TO LOCATION */}
+      {/* ========================================================= */}
+      {mealAssignLocation && (
+        <div className="modal-backdrop" onClick={() => setMealAssignLocation(null)}>
+          <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="modal-icon">
+                  <UtensilsCrossed size={19} />
+                </span>
+                <h2>Assign Meals for {mealAssignLocation.name}</h2>
+                <p>Choose which dishes can be ordered and delivered to <b>{mealAssignLocation.name}</b> ({mealAssignLocation.zone}, Lagos).</p>
+              </div>
+              <button className="icon-btn" onClick={() => setMealAssignLocation(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <LocationMealAssignForm
+              location={mealAssignLocation}
+              foods={foods}
+              onSave={saveLocationMealAssignments}
+              onCancel={() => setMealAssignLocation(null)}
+              isSaving={isSavingMealLocations}
+            />
           </div>
         </div>
       )}
