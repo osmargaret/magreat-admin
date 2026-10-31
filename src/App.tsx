@@ -819,6 +819,15 @@ function App() {
     { id: 'cocktail', label: 'Cocktail & Grill Bar', pricePerGuest: 5500 }
   ]);
   const [isSavingCateringPrices, setIsSavingCateringPrices] = useState(false);
+  const [marqueeMessages, setMarqueeMessages] = useState<string[]>([
+    '🎉 Order before 12pm and get same-day delivery — Lagos only',
+    '🍽️ Catering bookings now open for December events — book early!',
+    '✨ New freezer meals just added — stock up for the week',
+    '📞 Need help? Call or WhatsApp us: 09058271973',
+    '🎓 Culinary School intakes open — limited spots available',
+  ]);
+  const [newMarqueeMsg, setNewMarqueeMsg] = useState('');
+  const [isSavingMarquee, setIsSavingMarquee] = useState(false);
 
   const sectionRef = useRef(section);
   useEffect(() => {
@@ -1197,6 +1206,9 @@ function App() {
             if (data.minOrderAmount !== undefined) setSettingsMinOrder(String(data.minOrderAmount));
             if (data.deliveryFee !== undefined) setSettingsDeliveryFee(String(data.deliveryFee));
             if (data.openingHours) setSettingsOpeningHours(data.openingHours);
+            if (Array.isArray(data.marqueeMessages) && data.marqueeMessages.length > 0) {
+              setMarqueeMessages(data.marqueeMessages);
+            }
           }
         }
       })
@@ -1441,7 +1453,8 @@ function App() {
       corporateDiscounts: settingsCorporateDiscounts,
       minOrderAmount: Number(settingsMinOrder) || 0,
       deliveryFee: Number(settingsDeliveryFee) || 0,
-      openingHours: settingsOpeningHours
+      openingHours: settingsOpeningHours,
+      marqueeMessages,
     };
 
     try {
@@ -6645,6 +6658,145 @@ function App() {
                   <CheckCircle2 size={15} />
                   {isSavingSettings ? 'Saving...' : 'Save Operations'}
                 </button>
+              </section>
+
+              {/* ── Announcement Marquee Manager ── */}
+              <section className="panel settings-panel" style={{ gridColumn: '1 / -1', marginTop: 16 }}>
+                <div className="panel-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>📢</span>
+                      Announcement Marquee (Blue Top Bar)
+                    </h3>
+                    <p>These messages scroll across the blue strip at the top of the website. Changes are live instantly — no deploy needed.</p>
+                  </div>
+                  <button
+                    className="primary-btn"
+                    disabled={isSavingMarquee}
+                    onClick={async () => {
+                      setIsSavingMarquee(true);
+                      try {
+                        const res = await adminFetch(`${API_BASE}/settings`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ marqueeMessages })
+                        });
+                        if (res.ok) notify('✅ Marquee messages saved and live on the website!');
+                        else notify('⚠️ Could not save to backend — check connection.');
+                      } catch {
+                        notify('⚠️ Save failed — check backend connection.');
+                      } finally {
+                        setIsSavingMarquee(false);
+                      }
+                    }}
+                    style={{ background: '#182838', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <CheckCircle2 size={16} />
+                    {isSavingMarquee ? 'Saving Live...' : 'Save Marquee'}
+                  </button>
+                </div>
+
+                {/* Preview strip */}
+                <div style={{
+                  background: '#182838', borderRadius: 8, padding: '8px 18px',
+                  overflow: 'hidden', marginBottom: 18, position: 'relative'
+                }}>
+                  <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px', letterSpacing: 1 }}>
+                    Live Preview
+                  </p>
+                  <p style={{ color: '#fff', fontSize: 12, fontWeight: 600, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {marqueeMessages.length > 0 ? marqueeMessages.join('  ·  ') : '(no messages — add some below)'}
+                  </p>
+                </div>
+
+                {/* Message list */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {marqueeMessages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: '#f8fafc', border: '1px solid #e2e8f0',
+                        borderRadius: 8, padding: '8px 10px'
+                      }}
+                    >
+                      {/* Move up/down */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => {
+                            const next = [...marqueeMessages];
+                            [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                            setMarqueeMessages(next);
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'not-allowed' : 'pointer', opacity: idx === 0 ? 0.3 : 1, padding: '2px 4px', fontSize: 12, lineHeight: 1 }}
+                          title="Move up"
+                        >▲</button>
+                        <button
+                          type="button"
+                          disabled={idx === marqueeMessages.length - 1}
+                          onClick={() => {
+                            const next = [...marqueeMessages];
+                            [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                            setMarqueeMessages(next);
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: idx === marqueeMessages.length - 1 ? 'not-allowed' : 'pointer', opacity: idx === marqueeMessages.length - 1 ? 0.3 : 1, padding: '2px 4px', fontSize: 12, lineHeight: 1 }}
+                          title="Move down"
+                        >▼</button>
+                      </div>
+                      {/* Editable text */}
+                      <input
+                        value={msg}
+                        onChange={e => {
+                          const next = [...marqueeMessages];
+                          next[idx] = e.target.value;
+                          setMarqueeMessages(next);
+                        }}
+                        style={{ flex: 1, fontSize: 13, border: 'none', background: 'transparent', outline: 'none', color: '#1e293b', fontWeight: 500 }}
+                        placeholder="Enter announcement text..."
+                      />
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => setMarqueeMessages(prev => prev.filter((_, i) => i !== idx))}
+                        style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '4px 6px', borderRadius: 4, flexShrink: 0 }}
+                        title="Remove message"
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add new message */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    value={newMarqueeMsg}
+                    onChange={e => setNewMarqueeMsg(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newMarqueeMsg.trim()) {
+                        setMarqueeMessages(prev => [...prev, newMarqueeMsg.trim()]);
+                        setNewMarqueeMsg('');
+                      }
+                    }}
+                    placeholder="Type a new announcement and press Enter or +"
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 13, outline: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newMarqueeMsg.trim()) return;
+                      setMarqueeMessages(prev => [...prev, newMarqueeMsg.trim()]);
+                      setNewMarqueeMsg('');
+                    }}
+                    className="primary-btn"
+                    style={{ flexShrink: 0, padding: '10px 18px' }}
+                  >
+                    + Add
+                  </button>
+                </div>
+                <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>
+                  Tip: Use emojis at the start for visual flair. Click <strong>Save Marquee</strong> after editing to go live instantly.
+                </p>
               </section>
 
               <section className="panel settings-panel" style={{ gridColumn: '1 / -1', marginTop: 16 }}>
